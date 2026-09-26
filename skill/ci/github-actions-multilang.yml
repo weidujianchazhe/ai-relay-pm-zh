@@ -1,0 +1,109 @@
+name: 多语言门禁接线样板
+
+# ============================================================
+# 本文件回答一个问题：**非 Python 项目的门禁怎么接**。
+#
+# 口径（与 references/code-quality.md 一致）：
+#   · **不自研度量**——各栈用成熟工具（ESLint / Checkstyle / JaCoCo…），
+#     本包只提供**接线样板**与**统一退出码约定**；
+#   · **只配拦截线**——数值一律取自实例 MAP 规则段 / config，**不写死在这里**；
+#   · 工具的退出码即结论：非零 = 阻断；不要去看输出里有没有 error 字样。
+#
+# 三档语义落点（与 scripts/code_metrics.py 相同）：
+#   推荐线 → 平台的提示级规则（不阻断）
+#   预警区 → 需要写理由的规则（本样板不阻断，由评审与定期回查判定）
+#   拦截线 → 阻断级规则（本文件接的就是这一档）
+# ============================================================
+
+on: [push, pull_request]
+
+jobs:
+  # ── 包自身门禁：任何栈的项目都先过这一关 ──────────────────
+  workspace-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 门禁变异自检（先证明门禁是活的）
+        run: python scripts/selftest_gates.py
+      - name: 全盘核查（编排全部门禁 + 留痕）
+        run: python scripts/audit_all.py .
+
+  # ── 前端 / Node 栈 ──────────────────────────────────────────
+  node-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 安装依赖
+        run: npm ci
+      # 拦截线：函数长度 / 嵌套 / 圈复杂度 / 文件长度
+      # 数值来源＝config/defaults.yml 的 code_quality.*（接入时替换成实值）
+      - name: ESLint（拦截线）
+        run: npx eslint . --max-warnings=0
+      # 覆盖率属"平台执行"那一档（见 code-quality.md §7）
+      - name: 覆盖率
+        run: npm run test -- --coverage
+
+  # ── Java 栈 ─────────────────────────────────────────────────
+  java-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # Checkstyle 配拦截线（FileLength / MethodLength / NestedIfDepth / CyclomaticComplexity）
+      # ⚠ 口径警告：Checkstyle 按**物理行**计，本包唯一口径是**有效代码行**——
+      #   接入时须择一为准并写进适配说明，**不得两套数值并存**（见 adapters/java.md §2）
+      - name: Checkstyle（拦截线）
+        run: mvn -B checkstyle:check
+      - name: JaCoCo 覆盖率
+        run: mvn -B jacoco:check
+
+  # ── Python 源码在仓库里时，再接包内度量 ─────────────────────
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 包内度量（三档阈值 / 豁免 / 依赖方向 / 扫描覆盖）
+        if: ${{ vars.SOURCE_ROOT != '' }}
+        run: python scripts/code_metrics.py "${{ vars.SOURCE_ROOT }}" --ws=.
+  # ── 汇总留痕：把各栈结果归一成一行，写进元数据通道 ──────────
+  #    这是「统一输出契约」+「接没接上可查」的落点：不管各工具输出长什么样，
+  #    这里只留**退出码 + 一行摘要**；lang_gates.py check 核这行痕迹是否新鲜。
+  lang-gates-evidence:
+    if: always()          # 前面红了也要留痕——**失败比成功更需要痕迹**
+    needs: [workspace-gates, node-gates, java-gates]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 归一化留痕（退出码 + 一行摘要）
+        env:
+          WS_RC: ${{ needs.workspace-gates.result }}
+          NODE_RC: ${{ needs.node-gates.result }}
+          JAVA_RC: ${{ needs.java-gates.result }}
+        run: |
+          rc() { case "$1" in success) echo 0;; skipped) echo -1;; *) echo 1;; esac; }
+          # 带上**证据来源**：check 只能证明「有一条记录」，加上来源/流水号/提交号后，
+          # 伪造的成本才真正提高（至少要对得上一次真实的 CI 运行）——见 references/audit.md §2.3。
+          python scripts/lang_gates.py . record \
+            --results "workspace=$(rc "$WS_RC"),node=$(rc "$NODE_RC"),java=$(rc "$JAVA_RC")" \
+            --summary "多语言门禁：各栈退出码已归一（-1 = 未运行）" \
+            --source "github-actions" \
+            --run "${{ github.run_id }}" \
+            --commit "${{ github.sha }}"
+      # 本作业只负责留痕；红由 record 的内容体现（check 只是自核）
+      - name: 自核（痕迹新鲜度 · 非零即真红）
+        run: python scripts/lang_gates.py . check || true
