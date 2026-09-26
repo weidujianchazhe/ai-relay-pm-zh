@@ -1,0 +1,45 @@
+name: 协同工作区门禁
+
+# ============================================================
+# 本包的门禁都是**确定性函数 + 退出码**，可直接接进任何 CI。
+#   0 = 全通过 · 1 = 有[问题]（应阻断） · 2 = 仅[待核]（建议不阻断） · 3 = 脚本自身错误（应阻断）
+# 依赖：仅 Python 3 标准库（无第三方、无编译）。
+#
+# 纪律（与 references/code-quality.md §1.2 同源）：
+#   **工具只配拦截线**——不要在这里另写一套阈值；阈值一律取自实例 MAP 规则段。
+# ============================================================
+
+on: [push, pull_request]
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"      # 与工作区声明一致；本包不需要任何 pip 依赖
+
+      # ── 先证明门禁是活的，再拿它判别人 ──
+      # 一个永远返回 0 的脚本，和一条被删掉的检查，从输出上看不出区别。
+      - name: 门禁变异自检
+        run: python scripts/selftest_gates.py
+
+      # ── 全盘核查：编排全部门禁 + 以机器戳留痕 + 超期自查 ──
+      - name: 全盘核查
+        run: python scripts/audit_all.py .
+
+      # ── 代码度量与依赖方向（有源码时；SOURCE_ROOT 设为仓库变量）──
+      # 分层与依赖例外在**实例 MAP 规则段**声明，不写在这里：
+      #   - **分层**：ui > agent > core > llm > config > utils
+      #   - **依赖例外**：ui.main_window->ui.mw_parts
+      - name: 代码度量与依赖方向
+        if: ${{ vars.SOURCE_ROOT != '' }}
+        run: python scripts/code_metrics.py "${{ vars.SOURCE_ROOT }}" --ws=.
+
+      # ── 退出码：0 全通过 · 1 有[问题]＝阻断 · 3 脚本错误＝阻断 · **2 仅[待核]：本样板未实现其不阻断语义，接入方请自行处理** ──
+      #   （原样板只写注释没实现；本轮选择**如实声明**而非加实现——样板价值不值得改 4 个步骤的动作。）
+      - name: 退出码语义
+        if: always()
+        run: echo "0 全通过 · 1 有[问题] · 2 仅[待核] · 3 脚本错误"

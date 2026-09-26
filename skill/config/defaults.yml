@@ -1,0 +1,166 @@
+# 技能包默认值（skill defaults）—— 不是运行时真值，请勿误用
+#
+# ⚠ 语义边界（重要 —— 读错会破坏功能）
+#   本文件是**技能包提供的出厂默认值**，用途只有一个：
+#     「新建工作区时，把这里的值填进实例 MAP.md 的规则段」
+#
+#   **实例的运行时真值在实例的 MAP.md 规则段**，不在本文件。
+#   所有脚本取值顺序 = 实例 MAP 规则段 → 缺失才回落本文件。
+#
+#   为什么不能把本文件当唯一真值：
+#     每个项目的阈值本就不同（字数上限、行数口径、归档阈值各有取值）。
+#     若脚本只读本文件，就**破坏了「每项目可配」这个功能** —— 这是功能契约，不是冗余。
+#
+# 因此：**协议正文只引用键名**，数值只在本文件与实例 MAP 各一份。
+#
+# 协议正文引用写法：{{config:<section>.<key>}}（查值顺序见 MANIFEST §数值口径）
+
+schema_version: 1
+
+# ── 容量上限（接手 AI 默认阅读成本的三处容量上限）─────────────────
+# 语义：这是「容量上限」，不是「可扩大的容量」。不得以"更完整/更全面"为由调大。
+#   三处 = ① STATE（当前快照）② INDEX 热区（最近记录）③ REVIEWS（留痕尾部）
+#   留痕类产物（REVIEWS / archives / reports 冷区 / INDEX 冷区）**只增不删**，
+#   但**只增不删 ≠ 可以无限读**：读取面由容量上限限定，历史移到冷区后仍可查。
+capacity:
+  index_hot_rows: 20          # INDEX 主文件（热区）行数上限
+  state_max_chars: 15000      # STATE 快照字数上限
+  report_archive_threshold: 20 # reports 冷区归档触发篇数
+  task_card_hot_limit: 0      # 活跃任务卡上限（0 = 不限，按需启用）
+  reviews_hot_lines: 200      # REVIEWS.md 热区行数上限（超出部分由 closeout.py reviews-archive 滚入 archives/REVIEWS_archived.md）
+  # 设计蓝图（designs/<主题>.blueprint.md）——**人读视图**，超限就不再"直观"。
+  # 两个上限防的是同一件事：蓝图长成第二份详述（两份文件立刻开始漂移，且每轮重写代价回升）。
+  blueprint_max_lines: 60      # 蓝图总行数上限（约一屏）
+  blueprint_max_para_chars: 160 # 蓝图里单个段落字符数上限（结构视图不该有长段落）
+  # ── 上手成本：**度量单位是字符，不是文件数** ──────────────────
+  #  「只读一份卡 + 一份记录」是**读哪些**，不是**读多少**。
+  #  实测某真实项目：卡中位 5,445 字符、记录中位 3,505 字符——"两份文件"≈ 8,900 字符，
+  #  而单张卡最大 22,002 字符。**文件数恒定 ≠ 成本恒定。**
+  onboarding_max_chars: 12000  # 接手最小集（卡 + 其指针记录）字符上限；由 overview.py 度量
+  card_max_chars: 3000         # 单张任务卡字符上限——卡是**定位与指针**，不是档案（超限把内容写回记录）
+
+# ── 代码质量门禁（三档阈值口径）─────────────────────────────
+# 三档语义：
+#   recommended = 推荐线，理想目标，不强制（强模型自然达到）
+#   warning     = 预警区上界，允许存在，但必须写明未拆分原因（超限即信号）
+#   blocked     = 拦截线，超过即阻断（工具只配这一档，避免文档与工具两套数值）
+code_quality:
+  func_lines:
+    recommended: 50
+    warning: 100
+    blocked: 100          # 与 warning 同步：>100 阻断
+  nesting_depth:
+    recommended: 3
+    warning: 4
+    blocked: 4            # >4 阻断
+  cyclomatic_complexity:
+    recommended: 10
+    warning: 15
+    blocked: 15           # >15 阻断
+  file_lines:             # 单文件有效行上限
+    unit: effective       # effective = 去空行/纯注释/docstring 后的有效代码行
+    recommended: 600
+    blocked: 600
+  coverage:
+    core_business: 80     # 核心业务模块 %
+    util: 50              # 工具类/公共方法 %
+    ui: 0                 # UI 渲染层走 E2E，不强制单测
+  exemption_audit_days: 90  # 豁免回查周期（天，约每季度）
+
+  # 门禁读数可信（§1.4）：扫描覆盖低于此比例即报问题——
+  # 「退出码 0」只有在扫描范围达标时才等于合格，否则只是"没看"。
+  scope_min_percent: 80
+
+  # 注释密度——上限 1.5 条/函数：注释是成本，不是成绩
+  #
+  #      对强模型是纯成本——消耗它的输出预算与注意力。质量优先于数量。
+  comment_density:
+    min_per_function: 1.0
+    max_per_function: 1.5
+
+  # 豁免（exemption）—— 超限即信号的落地机制
+  exemption:
+    min_reason_chars: 10   # 理由最少字符数（防"逻辑需要"这类空话）——**由 code_metrics.py 实际读取**，
+                           # 不是文档里的摆设：写了没人执行的条款就是假账（见 references/audit.md §6）
+    # 空话理由黑名单：命中即视为未说明（由 scripts/code_metrics.py 读入）
+    # **只收中文**：本包口径是注释与理由一律用中文（标识符用英文）——见 references/code-style.md §S1。
+    # 判定忽略首尾标点与空白（见 code_metrics._hollow_re），"逻辑需要。" 与 "逻辑需要" 等价。
+    hollow_words: ["逻辑需要", "性能考虑", "业务需要", "历史原因", "暂时", "先这样", "太复杂", "算法需要", "按需", "不好拆"]
+
+  # 复用（DRY）阈值
+  reuse:
+    extract_threshold: 3   # 相同/相似代码出现第几次才提取公共方法（防过早抽象）
+
+# ── 运行环境（登记当前权限档位；本包约束路径不约束能力，见 references/artifacts.md §9.3）──
+environment:
+  sandbox: unknown        # danger-full-access | workspace-write | read-only | unknown
+                          # 登记的作用：有人绕过唯一入口直接改文件时，先能回答「他为什么能」。
+                          # 未登记不报错（单机单 AI 也常见），但 overview 会提示
+
+# ── 协作模式开关（未启用的模式保持关闭，避免未使用复杂度）──────────
+collaboration:
+  mode: light             # light | standard | coordination
+  roles_enabled: false    # 四角色权限矩阵（单人/单 AI 场景关闭）
+  stable_ids_enabled: false # TASK-ID/EVENT-ID/DESIGN-ID 严格模式
+  design_cards_enabled: false # 设计卡生命周期与批准门禁
+
+# ── 审计与恢复 ────────────────────────────────────────────────
+audit:
+  lock_timeout_sec: 5     # 写锁等待上限
+  cas_retry: 3            # compare-and-swap 重试次数
+  conflict_file_pattern: "CONFLICT_<ID>_<timestamp>.md"
+
+  # ── 人检标记（human check）────────────────────────────────────
+  # 设计依据见 references/audit.md §2.1。要点：
+  #   · 标记里**没有人名**。人名属自报值，可任意填写且无从核实，不构成审计锚（见 references/audit.md §2.0）；
+  #     机器码 + 时间是"痕迹"（由 scripts/stamp.py 现产，写入者不生产它）。
+  #   · **没有 owner 字段，也没有 next 字段**——到期是算出来的：
+  #     到期 = 上次戳的时间 + period_days。删掉可伪造的输入，等于删掉伪造面。
+  #   · slot 是**角色槽位**（注册制），不是人名：它说"该由哪个角色检"，
+  #     不说"某人承诺了"。伪造槽位没有收益，因为它不是任何人的不在场证明。
+  human_check:
+    marker: "#人检"        # 标记字面量（校验脚本按此扫描）
+    period_days: 90        # 到期周期（天）；到期由戳推导，不写 next 字段
+    machine_code_len: 8    # host 机器码取哈希前几位
+    require_git_when_available: true  # 有 git 必须用 git 戳（唯一能到"强"档的锚）
+    slots:                 # 角色槽位登记表（新增槽位在此登记，禁止写人名）
+      - human-review       # 人眼复核
+      - main-ai            # 主 AI 自检
+      - ai-review          # 交叉复核
+
+# ── 命名与编号 ────────────────────────────────────────────────
+naming:
+  report_pattern: "YYYY-MM-DD_主题_AI标识.md"
+  # AI 标识（身份锚）——**由 scripts/stamp.py --ai-id 产生，AI 不自报**
+  # 为什么不用"名字"：自报的名字可任意填写，且填写者即被审计者——
+  #   声明与证据同源，不构成审计锚。机器码由程序自动识别，填写者不生产该值。
+  # @ 之前是机器产，@ 之后是可选的**角色槽**（注册制，非人名），字形上可分辨。
+  ai_id_pattern: "{平台}-{机器码}[@{角色槽}]"
+  machine_code_len: 8      # 与 audit.human_check.machine_code_len 同源
+  branch_code_pattern: "[A-Z]{2}[0-9]{4,5}"  # example: EN0001
+  handoff_prefix: "交接 #"
+
+# ── 开关口径（重要，别读串）─────────────────────────────────────
+#   两类开关的默认值由**成本**决定：
+#     ① 脚本核查类 —— **不烧 token**（机器执行，只看退出码）      → **默认开**
+#     ② 能力开关类 —— 增加的是**人的认知负担与文档成本**          → **默认关**，按需启用
+#   判据一句话：够不够格默认开，看它烧不烧 token。
+# ── 任务卡板与合并提示（视图见 scripts/overview.py；分派见 references/workflow.md §4.1）──
+cards:
+  merge_hint_threshold: 8   # 活跃卡达到此数时提示"可考虑合并连续做"
+  inflight_minutes: 30      # 「文件 N 分钟前被改」**仅作提示**，不作在途判据（mtime 近似不可靠）
+
+# ── 架构分层（依赖方向检查；**实例在 MAP 规则段声明，此处只是形状示例**）──
+#   判据：左为高层，禁止低层引用高层；循环依赖须登记为例外。
+architecture:
+  layers: []        # 例：[ui, agent, core, llm, config, utils]
+  exceptions: []    # 已登记的例外边，例：["ui.main_window->ui.mw_parts"]
+
+tools:
+  periodic_audit: true
+  periodic_audit_days: 7      # 定期排查周期（天）：audit_all.py 读它判定超期    # 定期排查（默认开：跑脚本，不消耗模型上下文）
+  # 多语言门禁（**默认关**：单语言项目用不上；开了就要有痕迹，否则是假账）
+  #   本包不自研跨语言度量——各栈用成熟工具（ESLint / tsc / Checkstyle / golangci-lint / clippy），
+  #   本包只统一「退出码 + 一行摘要」并把结果留痕，由 scripts/lang_gates.py 核实"接没接上"。
+  lang_gates: false
+  lang_gates_days: 7      # 语言门禁痕迹的新鲜度周期（天）；超期且开关为开 → 报问题
