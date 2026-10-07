@@ -2,8 +2,8 @@
 """setup.py —— 首次启动的配置向导（问用户三件事，然后把决定留痕）
 
 用法：
-    python setup.py <工作区根> --plan                 # 打印询问单（AI 拿去问用户）
-    python setup.py <工作区根> --apply [--git yes|no] [--audit-days N] [--commit]
+    python setup.py <管理区> --plan                 # 打印询问单（AI 拿去问用户）
+    python setup.py <管理区> --apply [--git yes|no] [--audit-days N] [--commit]
 
 为什么要有这个脚本：
     首次建工作区有几件事**只有用户能定**，而定错了要么返工、要么留下没用的空档案。
@@ -36,7 +36,7 @@ from _common import note, ok, problem, read, summary, run, usage_exit  # noqa: E
 import lease as _lease  # noqa: E402  —— 共享文件写原语（CAS）
 from stamp import ai_id  # noqa: E402
 
-GITIGNORE = """# 协同工作区 .gitignore
+GITIGNORE = """# 管理区 .gitignore
 # 只忽略可再生与临时产物；reports/ INDEX/ STATE/ tasks/ 是本工作区的价值本身，必须入库。
 scripts/__pycache__/
 __pycache__/
@@ -93,35 +93,7 @@ def append_meta(root: Path, text: str):
     return _okk
 
 
-PLAN = """首次配置询问单（请用户逐条定；括号内为推荐值与理由）
-
-① 本地 git 备份 —— 启用吗？      推荐：【启用】
-   · 它同时解锁三件事：凭证锚（改动点附 commit hash）、越界改动检查、**强机器戳**
-   · 未启用时，人检/身份锚的戳只能是"弱"档（能写文件的人也能写同形戳）
-   · 代价：每次提交多一条 git 命令；工作区会多一个 .git 目录
-
-② 定期全盘核查周期 —— 几天一次？  推荐：【7 天】
-   · 核查是跑脚本，**不消耗模型上下文**；周期只决定"多久没人跑就要报红"
-   · 开关写着「开」而没人跑 = 假账；本包用 REVIEWS.md 里的机器戳证据自查，超期即红
-
-③ 工作流之外的脚本 —— 要装哪些？（可全不选）
-   这些不进日常接手路径，只在**用户自己想检查**时用：
-   · 全盘核查      audit_all.py    一条命令跑完全部门禁并留痕          【推荐】
-   · 一屏全貌      overview.py     项目现在什么状态                    【推荐】
-   · 代码度量      code_metrics.py 每次改代码后跑                      【写代码的项目推荐】
-   · 项目专属脚本  new_local.py    本项目特有的检查，起手生成骨架      【按需】
-   · 定时提醒 / 可视化 / 报告  —— 属 tools\\ 规范，**强依赖平台，不随包实现**
-
-④ 初始化收尾 —— 现在建第一张任务卡吗？  推荐：【建】
-   · 任务卡与设计卡是**人机之间的派发接口**：由人开口、AI 落卡。
-     **用户不知道它存在，功能就等于没装**——工作区建得再齐，用户照旧用"帮我改一下 XX"重新开始。
-   · 交付话术（照读四句）见 references/onboarding.md §6；本节只负责**把用户的答复记下来**。
-   · 答复必须由**用户**给出，AI 不得代填（锚源原则，见 references/audit.md §2.0）；
-     没问到就写 unasked —— 宁可留一个 [待核]，不要一条假账。
-
-定完请执行：
-   python setup.py <工作区根> --apply --git yes --audit-days 7 --cards yes [--commit]
-"""
+PLAN = (Path(__file__).resolve().parent / "templates" / "setup_wizard_questionnaire.txt").read_text(encoding="utf-8")
 
 
 def main() -> int:
@@ -143,7 +115,7 @@ def main() -> int:
 
     root = Path(a.root)
     if not root.is_dir():
-        problem("工作区根不存在：%s" % root)
+        problem("管理区不存在：%s" % root)
         return 3
     decided = []
 
@@ -164,7 +136,7 @@ def main() -> int:
                 if a.commit:
                     _git(root, "add", "-A")
                     rc2, out2 = _git(root, "commit", "-q", "-m",
-                                     "chore: 初始化协同工作区")
+                                     "chore: 初始化管理区")
                     if rc2 != 0 and "identity unknown" in out2:
                         # 不伪造身份：用具名"机器代理"身份，并在输出里讲清它是机器产生的。
                         # 这与 audit.md §2.0 的锚源原则一致——身份要么是真的人，要么是机器；
@@ -172,7 +144,7 @@ def main() -> int:
                         _git(root, "config", "user.name", "ai-relay")
                         _git(root, "config", "user.email", "ai-relay@%s.local" % ai_id())
                         rc2, out2 = _git(root, "commit", "-q", "-m",
-                                         "chore: 初始化协同工作区")
+                                         "chore: 初始化管理区")
                         note("git 未配置提交身份 → 已设**仓库级**机器身份 ai-relay@%s.local（不改全局配置）"
                              % ai_id())
                         note("要让提交归属到你个人，请自行改写：git config user.name / user.email")
@@ -216,18 +188,8 @@ def main() -> int:
         note("MAP 里未找到「定期排查」行 —— 请手工登记")
 
     print()
-    print("== 3. 初始化收尾：首张任务卡（话术见 references/onboarding.md §6） ==")
-    if a.cards == "yes":
-        ok("用户答复：现在建第一张任务卡")
-        note('执行：python scripts/closeout.py <工作区根> new-card "<任务名>"')
-        note("要先定方案就先建设计卡：同一命令加 --design（**未批准的设计不生成执行卡**）")
-        decided.append("首张任务卡=用户答『要』")
-    elif a.cards == "no":
-        note("用户答复：暂不建卡（下次对话可再问一次，不重复念）")
-        decided.append("首张任务卡=用户答『暂不』")
-    else:
-        tbd("未记录用户答复（--cards unasked）——**不得代填**；下次对话补问，话术见 references/onboarding.md §6")
-        decided.append("首张任务卡=未问")
+    print("== 3. 任务卡：不在初始化收尾问（见 references/onboarding.md §2.9）==")
+    note("任务卡按 §2.9：段 3 定稿后由 AI 拆分；段 4 仅跳过设计时问")
 
     print()
     print("== 4. 决定留痕 ==")
@@ -237,8 +199,8 @@ def main() -> int:
     else:
         note("无 REVIEWS.md —— 配置决定未留痕")
     print()
-    note("下一步：python scripts/validate_workspace.py <工作区根> —— 退出码 0 才算建好")
-    note("再跑一次全盘核查留底：python scripts/audit_all.py <工作区根>")
+    note("下一步：python scripts/validate_workspace.py <管理区> —— 退出码 0 才算建好")
+    note("再跑一次全盘核查留底：python scripts/audit_all.py <管理区>")
     return summary()
 
 

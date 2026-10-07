@@ -2,8 +2,8 @@
 """lang_gates.py —— 多语言门禁的**留痕与可查**（不自研度量，只统一口径）
 
 用法：
-    python lang_gates.py <工作区根> record --results "node=0,python=0,java=1" [--summary "..."]
-    python lang_gates.py <工作区根> check
+    python lang_gates.py <管理区> record --results "node=0,python=0,java=1" [--summary "..."]
+    python lang_gates.py <管理区> check
 
 要解决的两个问题（都在「不自研度量」这个前提下）：
   ① **接没接上不知道**：本包给的是接线样板（各栈用成熟工具），但项目接没接、跑没跑，无从判断；
@@ -170,12 +170,12 @@ def cmd_check(root: Path) -> int:
 def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if not args:
-        print("用法：python lang_gates.py <工作区根> record --results \"node=0,python=0\" [--summary \"...\"]")
-        print("      python lang_gates.py <工作区根> check")
+        print("用法：python lang_gates.py <管理区> record --results \"node=0,python=0\" [--summary \"...\"]")
+        print("      python lang_gates.py <管理区> check")
         return 3
     root = Path(args[0])
     if not root.is_dir():
-        problem("工作区根不存在：%s" % root)
+        problem("管理区不存在：%s" % root)
         return summary()
     if "check" in sys.argv[1:]:
         return cmd_check(root)

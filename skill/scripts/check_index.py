@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """check_index.py —— 索引完整性校验
 
-用法：python check_index.py <工作区根>
+用法：python check_index.py <管理区>
 何时跑：改索引后 / 定期
 依据：references/artifacts.md §5、references/audit.md §3.2
 
@@ -78,7 +78,7 @@ def check_file(path, label, root, branches, strict_cells=True):
 
 def main():
     if len(sys.argv) < 2:
-        print("用法：python check_index.py <工作区根>")
+        print("用法：python check_index.py <管理区>")
         return 3
     root = Path(sys.argv[1])
     branches = registered_branches(root)

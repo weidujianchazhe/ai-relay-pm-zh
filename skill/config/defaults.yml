@@ -1,3 +1,4 @@
+# 本文件是**出厂默认快照**；**实例真值在 `MAP.md` 规则段**——两者不一致时**以 MAP 为准**。
 # 技能包默认值（skill defaults）—— 不是运行时真值，请勿误用
 #
 # ⚠ 语义边界（重要 —— 读错会破坏功能）
@@ -28,15 +29,16 @@ capacity:
   report_archive_threshold: 20 # reports 冷区归档触发篇数
   task_card_hot_limit: 0      # 活跃任务卡上限（0 = 不限，按需启用）
   reviews_hot_lines: 200      # REVIEWS.md 热区行数上限（超出部分由 closeout.py reviews-archive 滚入 archives/REVIEWS_archived.md）
-  # 设计蓝图（designs/<主题>.blueprint.md）——**人读视图**，超限就不再"直观"。
+  # 设计蓝图（designs/<卡名>.blueprint.md）——**人读视图**，超限就不再"直观"。
   # 两个上限防的是同一件事：蓝图长成第二份详述（两份文件立刻开始漂移，且每轮重写代价回升）。
-  blueprint_max_lines: 60      # 蓝图总行数上限（约一屏）
+  blueprint_max_lines: 100     # 蓝图总行数上限（**超线仅提醒，不阻断**——人读视图的直观性提醒线）
   blueprint_max_para_chars: 160 # 蓝图里单个段落字符数上限（结构视图不该有长段落）
   # ── 上手成本：**度量单位是字符，不是文件数** ──────────────────
   #  「只读一份卡 + 一份记录」是**读哪些**，不是**读多少**。
   #  实测某真实项目：卡中位 5,445 字符、记录中位 3,505 字符——"两份文件"≈ 8,900 字符，
   #  而单张卡最大 22,002 字符。**文件数恒定 ≠ 成本恒定。**
   onboarding_max_chars: 12000  # 接手最小集（卡 + 其指针记录）字符上限；由 overview.py 度量
+  skill_max_chars: 8000        # 技能包自身入口 SKILL.md 字符上限；由 scripts/check_size_budget.py 检查（超限 exit=1）
   card_max_chars: 3000         # 单张任务卡字符上限——卡是**定位与指针**，不是档案（超限把内容写回记录）
 
 # ── 代码质量门禁（三档阈值口径）─────────────────────────────
@@ -44,6 +46,13 @@ capacity:
 #   recommended = 推荐线，理想目标，不强制（强模型自然达到）
 #   warning     = 预警区上界，允许存在，但必须写明未拆分原因（超限即信号）
 #   blocked     = 拦截线，超过即阻断（工具只配这一档，避免文档与工具两套数值）
+#
+# 【2026-10-02 动作等级调整】规模类（func_lines / nesting_depth /
+#   cyclomatic_complexity / file_lines）的**超限信号降为「观察」**，不再阻断。
+#   依据：references/empirical-evidence 的 85 条人工标注实测——规模不预测缺陷，
+#   触发分档（C/CN/N）中"需要动作"0 条，唯一真缺陷与规模无关。
+#   **数值未改、检查未删、信号仍逐条打印**；只是从"阻断"降为"观察"。
+#   若要恢复阻断：在 scripts/code_metrics.py 的 _is_scale_msg() 里改为 return False。
 code_quality:
   func_lines:
     recommended: 50
@@ -102,7 +111,7 @@ collaboration:
   mode: light             # light | standard | coordination
   roles_enabled: false    # 四角色权限矩阵（单人/单 AI 场景关闭）
   stable_ids_enabled: false # TASK-ID/EVENT-ID/DESIGN-ID 严格模式
-  design_cards_enabled: false # 设计卡生命周期与批准门禁
+  design_cards_enabled: false # 设计卡生命周期与定稿门禁
 
 # ── 审计与恢复 ────────────────────────────────────────────────
 audit:

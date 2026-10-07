@@ -1,5 +1,7 @@
 # 落地附录 · Rust
 
+> **状态：未实现（仅说明）** —— 本文件是适配说明，不是已实现能力；语言准入判据与晋升门槛见 references/language-adapters.md 12 与 references/language-quality-adaptation-plan.md。
+
 > ⚠️ **本文件不属技能正文**，是 `references/code-quality.md` 的**按栈落地附录**——只回答「在 Rust 栈上用什么工具、配什么参数、接线在哪」。
 > 正文条款以 `references/code-quality.md` 为准（下文一律简称「正文」）；文中 `{{config:...}}` 为占位符，落地时由 `config/defaults.yml` 的实值替换。
 
@@ -78,3 +80,26 @@ cargo fmt --check && cargo clippy --all-targets --all-features -- -D warnings &&
 ---
 
 **本文件不属技能正文**；正文见 `references/code-quality.md`。
+
+
+## 附 0. 外部先验（权威来源，接入时须核对版本）
+
+**Rust**：Rust 官方 API Guidelines · Clippy lint 分组（correctness / suspicious / style / complexity / perf）· Rust Book 与 Nomicon（unsafe）· RustSec Advisory DB · cargo 工具文档
+
+> 纪律（与 references/quality-baseline-design.md 一致）：
+> ① 这些规范不是普适权威（大厂的风格指南是对其自身生态的约定）；
+> ② 工具默认值不是我们的标准 —— 我们只借它们回答什么值得测，阈值仍由真实样本校准。
+
+## 附 5. 已知缺陷集（取自标准，不含自采样）
+
+> 不自己造缺陷样本；直接用权威标准的编号与规则名当已知缺陷集。
+- Clippy correctness 组（必然错误）· suspicious 组
+- unsafe 边界：clippy::undocumented_unsafe_blocks
+- unwrap / expect 滥用：clippy::unwrap_used · clippy::expect_used
+- 整数溢出（debug / overflow-checks）· CWE-476 · CWE-190
+- 依赖漏洞：cargo audit（RustSec）
+- Miri（UB 与别名规则检测，Rust 里 sanitizer 的对应物）
+- Q6 证据：cargo llvm-cov / tarpaulin · criterion（性能）
+
+> 用法：按 Provider 机制接入工具后，用这些条目验证工具是否真能抓到；
+> 抓不到的登记为盲区，不假装覆盖。

@@ -2,8 +2,8 @@
 """new_local.py —— 项目自定义脚本脚手架
 
 用法：
-    python new_local.py <工作区根> <脚本名> --purpose "<一句话用途>"
-    python new_local.py <工作区根> <脚本名> --purpose "..." --force
+    python new_local.py <管理区> <脚本名> --purpose "<一句话用途>"
+    python new_local.py <管理区> <脚本名> --purpose "..." --force
 
 何时跑：需要一条本项目专属的检查、而技能包里没有对应脚本时。
 依据：scripts/local/README.md（自定义脚本契约）
@@ -26,58 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import note, ok, problem, run, usage_exit  # noqa: E402
 
-TEMPLATE = '''# -*- coding: utf-8 -*-
-"""{name}.py —— {purpose}
-
-用法：python {name}.py <工作区根>
-何时跑：{when}
-
-回本口径：TODO —— 写清它取代了什么重复劳动（例：每张卡手工核对 X，约 5 分钟/次）。
-         没有回本口径的门禁会被当成负担，然后被绕过。
-
-踩坑记录：TODO —— 改本脚本前必须知道的事（无则写「暂无」）。
-
-依据：scripts/local/README.md（接口契约：三态输出 + 退出码 0/1/2/3，仅标准库）
-"""
-from __future__ import annotations
-
-import re
-import sys
-from pathlib import Path
-
-# 复用技能包的共用设施，不要重写样板（三态输出 / 取值顺序 / 汇总与退出码）
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from _common import config, note, ok, problem, read, summary, tbd, run  # noqa: E402
-
-
-def main() -> int:
-    if len(sys.argv) < 2:
-        print("用法：python {name}.py <工作区根>")
-        return 3
-    root = Path(sys.argv[1])
-    if not root.is_dir():
-        problem("工作区根不存在：%s" % root)
-        return summary()
-
-    print("== 1. <这一节查什么> ==")
-
-    # ── TODO：在这里写判据 ────────────────────────────────────
-    # 只输出确定性结论：
-    #   ok(...)      确定合格
-    #   problem(...) 确定违规（会令退出码为 1）
-    #   tbd(...)     无法确定性判定（令退出码为 2）——语义类一律走这里，脚本不硬判
-    #   note(...)    设计上永久如此的提示，不计数、不影响退出码
-    #
-    # 阈值不要写死在这里：用 config(root, "<section>.<key>", <fallback>) 取值，
-    # 顺序为「实例 MAP 规则段 → config/defaults.yml → fallback」。
-    note("尚未实现判据——请编辑本文件补上 TODO 段")
-
-    return summary()
-
-
-if __name__ == "__main__":
-    sys.exit(run(main))
-'''
+TEMPLATE = (Path(__file__).resolve().parent / "templates" / "new_local_module_template.txt").read_text(encoding="utf-8")
 
 NAME_RE = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 
@@ -85,7 +34,7 @@ NAME_RE = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 def main() -> int:
     ap = argparse.ArgumentParser(description="生成项目自定义脚本骨架（放到 scripts/local/）")
     usage_exit(ap)
-    ap.add_argument("root", help="工作区根（脚本将写入 <root>/scripts/local/）")
+    ap.add_argument("root", help="管理区（脚本将写入 <root>/scripts/local/）")
     ap.add_argument("name", help="脚本名（小写字母/数字/下划线，不含 .py）")
     ap.add_argument("--purpose", default="<一句话用途>", help="一句话用途，写入 docstring")
     ap.add_argument("--when", default="<何时跑>", help="何时跑，写入 docstring")

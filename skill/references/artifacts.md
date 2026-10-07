@@ -12,9 +12,9 @@
 
 | | 卡片模式（`card`） | 工作区模式（`light` / `standard` / `coordination`） |
 |---|---|---|
-| 产物 | **一个卡片文件**（模板 `templates/CARD.md`） | 见 §1 工作区文件清单 |
-| 位置 | 任意（项目根亦可） | `{WORKSPACE_ROOT}\<项目名>\` |
-| 交接载体 | 卡片内的「交接流水」（**追加式**） | `reports\` 记录 + 索引指针链 |
+| 产物 | **一个卡片文件**（模板 `templates/CARD.md`） | 见 §1 管理区文件清单 |
+| 位置 | 任意（项目根亦可） | `{MGMT_ROOT}/<项目名>/` |
+| 交接载体 | 卡片内的「交接流水」（**追加式**） | `reports/` 记录 + 索引指针链 |
 | 遍历方式 | 人读卡 | 指针链（卡「上次交接」→ 记录「下一步」→ 索引 [接力] 行） |
 | 门禁 | 无 | `scripts/` 全套 |
 | 升级 | 卡片内容原样迁入任务卡，再按 §1 建工作区 | — |
@@ -24,31 +24,31 @@
 
 ---
 
-## 1. 工作区文件清单
+## 1. 管理区文件清单
 
 ```
-{WORKSPACE_ROOT}\<项目名>\
+{MGMT_ROOT}/<项目名>/
 ├── SKILL.md              协议入口（路由表；随工作区走）
 ├── MANIFEST.md           版本与文件清单声明（单一权威源）
-├── references\           协议正文逐字副本（随工作区走，**不在接手路径上**）
-├── scripts\              随包脚本副本（工作区可自跑门禁，不依赖源包在不在）
-│   └── local\            项目自定义脚本（**技能包升级不覆盖**；见 scripts/local/README.md）
+├── references/           协议正文逐字副本（随工作区走，**不在接手路径上**）
+├── scripts/              随包脚本副本（工作区可自跑门禁，不依赖源包在不在）
+│   └── local/            项目自定义脚本（**技能包升级不覆盖**；见 scripts/local/README.md）
 ├── config.yml            本工作区的运行时配置（由技能包 config/defaults.yml 实例化而来）
 ├── MAP.md                项目地图：环境 / 规则 / 协议摘要 / 路径注册表（低频写）
 ├── STATE.md              当前快照：人读区 + AI 区（字段级更新）
 ├── REVIEWS.md            元数据通道：复盘 / 版本 / 恢复登记（追加式）
-├── tasks\                任务卡（每卡一文件，按工作命名）
-├── reports\              交接记录 / 简化总结（每次一篇）
+├── tasks/                任务卡（每卡一文件，按工作命名）
+├── reports/              交接记录 / 简化总结（每次一篇）
 ├── INDEX.md              索引热区（最近若干行）
-├── examples\             范例库（**按需**；从技能包 examples/ 复制骨架后自行积累；规则见 references/code-style.md §S5）
-├── designs\              设计区（**不在接手路径上**；形态与归档规则见 references/design.md）
+├── examples/             范例库（**按需**；从技能包 examples/ 复制骨架后自行积累；规则见 references/code-style.md §S5）
+├── designs/              设计区（**不在接手路径上**；形态与归档规则见 references/design.md）
 │   ├── <主题>.md           详述（叙述：范围 / 迁移 / 验证 / 理由）
 │   ├── <主题>.blueprint.md 蓝图（结构：一屏可扫，给人看）
-│   └── archives\           设计归档（已拆完全部任务 / 已作废）
-├── archives\
-│   ├── done\             完成卡归档
+│   └── archives/           设计归档（已拆完全部任务 / 已作废）
+├── archives/
+│   ├── done/             完成卡归档
 │   └── INDEX_archived.md 索引冷区（不可变全量）
-└── tools\                可选工具区（按需拉动，不进接手路径）
+└── tools/                可选工具区（按需拉动，不进接手路径）
 ```
 
 ---
@@ -63,9 +63,9 @@
 | **类型标记** | `[接力]` `[完成]` `[废弃]` `[里程碑]` | 索引类型校验 |
 | **分支码格式** | `XX0000`（两位大写字母 + 4~5 位数字） | 编号校验 / 审计 ID 锚 |
 | **记录文件名** | `YYYY-MM-DD_主题_AI标识.md` | 命名校验 |
-| **目录名** | `tasks\` `reports\` `archives\` `archives\done\` `designs\` `designs\archives\` `tools\` `references\` `scripts\` `scripts\local\` | 全部脚本 / MAP 路径注册表 |
+| **目录名** | `tasks/` `reports/` `archives/` `archives/done/` `designs/` `designs/archives/` `tools/` `references/` `scripts/` `scripts/local/` | 全部脚本 / MAP 路径注册表 |
 | **设计区文件名** | 详述 `<主题>.md` · 蓝图 `<主题>.blueprint.md`（后缀冻结） | 成对性校验 / 设计归档脚本 |
-| **设计卡字段** | 「拆分出的执行卡」 | 设计归档门禁判据 |
+| **设计卡字段** | 「拆分出的任务卡」 | 设计归档门禁判据 |
 
 > **改任何一项之前**：先过 `references/change-control.md` §A 第 2 条（交叉影响检查），grep 全包列出同步清单。
 
@@ -76,7 +76,7 @@
 | 区块 | 内容 |
 |---|---|
 | **人读定位区** | 项目 / 模块 / 任务一句话 / 状态 · 下一步 —— **由 AI 区自动生成，不靠主观对齐** |
-| **AI 字段区** | 编号 / 类型 / 前置批准 / 状态 / 描述 / 要点 / 代码根路径 / 涉及 / 承接 / 进度锚点 / 上次交接 / 已提炼 / 设计偏离 / 派发摘录 / 验收状态 |
+| **AI 字段区** | 编号 / 类型 / 前置定稿 / 状态 / 描述 / 要点 / 代码根路径 / 涉及 / 承接 / 进度锚点 / 上次交接 / 已提炼 / 设计偏离 / 派发摘录 / 验收状态 |
 
 > **字段真值**以 `templates/tasks/TASK_CARD.template.md` 与 `scripts/closeout.py` 的 `CARD_FIELDS` 为准（`gen_views §5` 机检二者一致）；**本行只讲语义**，不逐字重复字段清单。
 
@@ -92,7 +92,7 @@
 任务 ← 描述首句 · 状态 ← 状态字段 · 下一步 ← 要点①
 
 **卡长度纪律（成本纪律，不是格式洁癖）**：单卡 ≤ `{{config:capacity.card_max_chars}}` 字符。
-**卡是「定位 + 指针」，不是档案**——过程细节归 `reports\`，全局判断归 `STATE.md`，
+**卡是「定位 + 指针」，不是档案**——过程细节归 `reports/`，全局判断归 `STATE.md`，
 历史归冷区。卡一长，**上手成本立刻随项目年龄增长**：实测某真实项目单卡最大 22,002 字符，
 是建议上限的 7 倍，而它承载的信息本可以在记录里。超限时把内容**写回记录**，卡上只留指针与当前落点。
 
@@ -131,7 +131,7 @@
 - **人读区**：3 行摘要（项目 / 任务分布 / 目录指引），**由 AI 区自动生成**
 - **AI 区**：进行中任务条目 · 待确认决策点 · 活跃已知限制 · 并发与元数据
 - **更新方式**：**字段级更新**——写前读最新，只改自己那条与人读区，**禁止整文件盲覆盖**
-- **容量上限**：见 {{config:capacity.state_max_chars}}。超限时按快照纪律把历史段移入 `reports\`，只留当前快照。
+- **容量上限**：见 {{config:capacity.state_max_chars}}。超限时按快照纪律把历史段移入 `reports/`，只留当前快照。
 - **不维护累计统计**（完成/废弃总数这类"期末余额"）—— 归索引冷区按需查询，**计数成本不随项目规模增长**
 
 ---
@@ -161,18 +161,18 @@
 
 | 留痕产物 | 增量 | 读取面（AI 实际会读的） | 容量上限 | 超限怎么办 |
 |---|---|---|---|---|
-| `REVIEWS.md` | 元数据通道：每次全盘核查追加一行机器戳；恢复动作、配置决定各追加一条 | **尾部若干行**（"最近发生了什么"） | `capacity.reviews_hot_lines`（示例默认 200 行） | 跑 `scripts/closeout.py reviews-archive` → 溢出部分**追加**到 `archives\REVIEWS_archived.md`，热区只留尾部 |
-| `reports\` | 每次提交一篇 | 接手时**只读卡上指针指向的那一篇** | `capacity.report_archive_threshold`（篇数） | `closeout.py archive-reports` 滚动归档，索引指向同步 |
-| `INDEX.md` 冷区（`archives\INDEX_archived.md`） | 每行一条记录 | **不整读**：按编号/日期定点取 | 不可变全量（冷区不设上限，它不被整读） | 无需处理 |
-| `archives\done\` | 完工后移入的卡 | 只在"这件事以前做过吗"时按名查 | 无（每张卡是独立文件） | 无需处理 |
-| `designs\archives\` | 走完流程的设计卡（详述 + 蓝图一起移） | **只按主题定点查**——"当初为什么这么定"才翻 | 活跃设计区（`designs\`）由归档保持清空 | 跑 `closeout.py design-archive`（触发条件见 `references/design.md` §4） |
+| `REVIEWS.md` | 元数据通道：每次全盘核查追加一行机器戳；恢复动作、配置决定各追加一条 | **尾部若干行**（"最近发生了什么"） | `capacity.reviews_hot_lines`（示例默认 200 行） | 跑 `scripts/closeout.py reviews-archive` → 溢出部分**追加**到 `archives/REVIEWS_archived.md`，热区只留尾部 |
+| `reports/` | 每次提交一篇 | 接手时**只读卡上指针指向的那一篇** | `capacity.report_archive_threshold`（篇数） | `closeout.py archive-reports` 滚动归档，索引指向同步 |
+| `INDEX.md` 冷区（`archives/INDEX_archived.md`） | 每行一条记录 | **不整读**：按编号/日期定点取 | 不可变全量（冷区不设上限，它不被整读） | 无需处理 |
+| `archives/done/` | 完工后移入的卡 | 只在"这件事以前做过吗"时按名查 | 无（每张卡是独立文件） | 无需处理 |
+| `designs/archives/` | 走完流程的设计卡（详述 + 蓝图一起移） | **只按主题定点查**——"当初为什么这么定"才翻 | 活跃设计区（`designs/`）由归档保持清空 | 跑 `closeout.py design-archive`（触发条件见 `references/design.md` §4） |
 | 版本控制历史（若启用） | 每次提交 | **按 commit hash 定点查** | 无 | 无需处理 |
 
 > **为什么给 REVIEWS 封顶而不给它设"最多写几条"**：审计要求留痕**完整**（不得为了省事丢证据），
 > 而阅读成本要求**有界**——两者不冲突：**写可以无限追加，读只读尾部**。
 > 这正是"移出不删除"在留痕上的同一条纪律。
 
-**归档红线在留痕上依然成立**：`reports\` 与 `archives\` 下文件**禁删禁移**（唯一例外＝归档流程，且移后必须同步索引行指向）。
+**归档红线在留痕上依然成立**：`reports/` 与 `archives/` 下文件**禁删禁移**（唯一例外＝归档流程，且移后必须同步索引行指向）。
 `reviews-archive` 只做「先写冷区、后截热区」的追加式滚动：**任何内容都不被删除，只是换了个文件**。
 
 ---

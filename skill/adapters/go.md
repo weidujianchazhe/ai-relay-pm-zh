@@ -1,5 +1,7 @@
 # 落地附录 · Go
 
+> **状态：未实现（仅说明）** —— 本文件是适配说明，不是已实现能力；语言准入判据与晋升门槛见 references/language-adapters.md 12 与 references/language-quality-adaptation-plan.md。
+
 > ⚠️ **本文件不属技能正文**，是 `references/code-quality.md` 的**按栈落地附录**——只回答「在 Go 栈上用什么工具、配什么参数、接线在哪」。
 > 正文条款以 `references/code-quality.md` 为准（下文一律简称「正文」）；文中 `{{config:...}}` 为占位符，落地时由 `config/defaults.yml` 的实值替换。
 
@@ -86,3 +88,24 @@ linters-settings:
 ---
 
 **本文件不属技能正文**；正文见 `references/code-quality.md`。
+
+
+## 附 0. 外部先验（权威来源，接入时须核对版本）
+
+**Go**：Go 官方 Code Review Comments · Effective Go · Google Go Style Guide · golangci-lint 规则集 · Go 官方 race detector 与 pprof 文档 · Uber Go Style Guide
+
+> 纪律（与 references/quality-baseline-design.md 一致）：
+> ① 这些规范不是普适权威（大厂的风格指南是对其自身生态的约定）；
+> ② 工具默认值不是我们的标准 —— 我们只借它们回答什么值得测，阈值仍由真实样本校准。
+
+## 附 5. 已知缺陷集（取自标准，不含自采样）
+
+> 不自己造缺陷样本；直接用权威标准的编号与规则名当已知缺陷集。
+- govet：printf 系列 · shadow · lostcancel（context 取消泄漏）· copylocks
+- staticcheck SA 系列 · errcheck（未检查错误）· ineffassign（无效赋值）
+- goroutine 泄漏（见 language-adapters 与多语言数据方案的风险矩阵）
+- CWE-362 竞态（由 go test -race 承接）· 空指针解引用
+- Q6 证据：go test -coverprofile fail-under · govulncheck（依赖漏洞）· pprof（性能）
+
+> 用法：按 Provider 机制接入工具后，用这些条目验证工具是否真能抓到；
+> 抓不到的登记为盲区，不假装覆盖。

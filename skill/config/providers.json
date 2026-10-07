@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "contract": "统一格式 = 每行一个 JSON：file / line / rule / severity(error|warning|info) / message。工具原生格式不是 JSONL 的，由项目侧薄适配器（<=20 行，放项目 tools/，不进包）转换。",
+  "procedure": [
+    "1 收该语言 / 资产的已知缺陷（来自权威标准编号，不自采样）",
+    "2 选成熟工具（本包不实现解析器）",
+    "3 写薄适配器：工具原生输出 -> 统一 JSONL（<=20 行，放项目 tools/）",
+    "4 在 config/providers.json 增一条档案（probe 指向真工具，run 指向适配器命令）",
+    "5 用 provider_gate.py --selftest 与真实仓库各跑一次，确认能变红",
+    "6 抓不到的缺陷登记为盲区，不假装覆盖"
+  ],
+  "providers": [
+    {"key":"c","kind":"language","title":"C","tool":"cppcheck","probe":["cppcheck","--version"],"run":["c-json","{root}"],"needs_adapter":true,"standards":["SEI CERT C","MISRA C:2012","ISO C"],"defects":["CERT ARR30-C","CERT MEM30-C","CERT INT30-C","CWE-252"]},
+    {"key":"cpp","kind":"language","title":"C++","tool":"clang-tidy","probe":["clang-tidy","--version"],"run":["cpp-json","{root}"],"needs_adapter":true,"standards":["C++ Core Guidelines","SEI CERT C++","MISRA C++:2023","AUTOSAR C++14"],"defects":["CERT MEM50-CPP","GSL R.3","GSL F.26","CWE-476"]},
+    {"key":"javascript","kind":"language","title":"JavaScript","tool":"eslint","probe":["eslint","--version"],"run":["js-json","{root}"],"needs_adapter":true,"standards":["eslint:recommended","eslint-plugin-security","OWASP Node.js Cheat Sheet"],"defects":["detect-eval","detect-child-process","CWE-79","CWE-1321"]},
+    {"key":"typescript","kind":"language","title":"TypeScript","tool":"tsc","probe":["tsc","--version"],"run":["ts-json","{root}"],"needs_adapter":true,"standards":["typescript-eslint strict-type-checked","TS handbook strict"],"defects":["no-unsafe-assignment","no-floating-promises","CWE-704"]},
+    {"key":"java","kind":"language","title":"Java","tool":"spotbugs","probe":["spotbugs","-version"],"run":["java-json","{root}"],"needs_adapter":true,"standards":["SpotBugs Bug Patterns","PMD","Google Java Style"],"defects":["NP_NULL_ON_SOME_PATH","OBL_UNSATISFIED_OBLIGATION","CWE-404"]},
+    {"key":"go","kind":"language","title":"Go","tool":"golangci-lint","probe":["golangci-lint","--version"],"run":["go-json","{root}"],"needs_adapter":true,"standards":["Go 官方 Code Review Comments","staticcheck","govet"],"defects":["govet.lostcancel","errcheck","CWE-362"]},
+    {"key":"rust","kind":"language","title":"Rust","tool":"cargo","probe":["cargo","--version"],"run":["cargo","clippy","--message-format","json","--","-D","warnings"],"needs_adapter":false,"standards":["Rust API Guidelines","Clippy lint groups","RustSec"],"defects":["clippy::unwrap_used","clippy::undocumented_unsafe_blocks","CWE-190"]},
+    {"key":"html","kind":"asset","title":"HTML","tool":"htmlhint","probe":["htmlhint","--version"],"run":["html-json","{root}"],"needs_adapter":true,"standards":["HTMLHint","W3C validator","axe (a11y)"],"defects":["a11y-img-alt","CWE-79"]},
+    {"key":"css","kind":"asset","title":"CSS","tool":"stylelint","probe":["stylelint","--version"],"run":["css-json","{root}"],"needs_adapter":true,"standards":["Stylelint 标准配置"],"defects":["no-duplicate-selectors","CWE-79(内联样式)"]},
+    {"key":"scss","kind":"asset","title":"SCSS","tool":"stylelint","probe":["stylelint","--version"],"run":["css-json","{root}"],"needs_adapter":true,"standards":["Stylelint scss 配置"],"defects":["@extend 滥用"]},
+    {"key":"xml","kind":"asset","title":"XML","tool":"xmllint","probe":["xmllint","--version"],"run":["xml-json","{root}"],"needs_adapter":true,"standards":["W3C XML 规范"],"defects":["格式非法","XXE 风险"]},
+    {"key":"sql","kind":"asset","title":"SQL","tool":"sqlfluff","probe":["sqlfluff","--version"],"run":["sql-json","{root}"],"needs_adapter":true,"standards":["sqlfluff 规则集","OWASP SQL 注入防护"],"defects":["CWE-89","全表扫描","空值三值逻辑"]},
+    {"key":"bash","kind":"asset","title":"Bash","tool":"shellcheck","probe":["shellcheck","--version"],"run":["sh-json","{root}"],"needs_adapter":true,"standards":["ShellCheck 规则集","Google Shell Style"],"defects":["SC2086(未加引号)","SC2046","危险 rm"]},
+    {"key":"powershell","kind":"asset","title":"PowerShell","tool":"pwsh","probe":["pwsh","-v"],"run":["ps-json","{root}"],"needs_adapter":true,"standards":["PSScriptAnalyzer 规则集"],"defects":["PSAvoidUsingInvokeExpression","PSUseDeclaredVarsMoreThanAssignments"]},
+    {"key":"yaml","kind":"asset","title":"YAML","tool":"yamllint","probe":["yamllint","--version"],"run":["yaml-json","{root}"],"needs_adapter":true,"standards":["yamllint 默认规则","actionlint(CI)"],"defects":["truthy","重复键","缩进歧义"]},
+    {"key":"json","kind":"asset","title":"JSON","tool":"python -m json.tool","probe":["python","--version"],"run":["json-json","{root}"],"needs_adapter":true,"standards":["RFC 8259"],"defects":["格式非法","重复键"]},
+    {"key":"toml","kind":"asset","title":"TOML","tool":"taplo","probe":["taplo","--version"],"run":["toml-json","{root}"],"needs_adapter":true,"standards":["TOML v1.0.0"],"defects":["格式非法"]},
+    {"key":"dockerfile","kind":"asset","title":"Dockerfile","tool":"hadolint","probe":["hadolint","--version"],"run":["docker-json","{root}"],"needs_adapter":true,"standards":["hadolint 规则集","Docker 官方最佳实践"],"defects":["DL3008(未固定版本)","DL3002(非 root)","密钥硬编码"]},
+    {"key":"fortran","kind":"numeric","title":"Fortran","tool":"gfortran","probe":["gfortran","--version"],"run":["f-json","{root}"],"needs_adapter":true,"standards":["ISO/IEC 1539","gfortran -fcheck=all"],"defects":["越界(-fcheck=bounds)","未初始化"],"admission":{"unique":"数组语义与列主序性能模型、大规模数值内核","identify":"越界 / 未初始化 / 精度与隐式类型转换（编译器与运行时检查可承接）"}},
+    {"key":"matlab","kind":"numeric","title":"MATLAB","tool":"mlint","probe":["mlint","-help"],"run":["matlab-json","{root}"],"needs_adapter":true,"standards":["MathWorks Code Analyzer 规则"],"defects":["未预分配数组","索引从 1 开始"],"admission":{"unique":"矩阵与工具箱生态、向量化语义","identify":"未预分配 / 索引基 / 隐式扩展（Code Analyzer 可承接）；专有工具链 -> 未安装即待核"}},
+    {"key":"r","kind":"numeric","title":"R","tool":"Rscript","probe":["Rscript","--version"],"run":["r-json","{root}"],"needs_adapter":true,"standards":["lintr 规则集","R 官方风格指南"],"defects":["lintr.object_usage","索引从 1 开始","因子与字符隐式转换"],"admission":{"unique":"向量化与统计建模语义、公式接口","identify":"未使用对象 / 索引基 / 隐式强制转换（lintr 与 testthat 可承接）"}},
+    {"key":"julia","kind":"numeric","title":"Julia","tool":"julia","probe":["julia","--version"],"run":["jl-json","{root}"],"needs_adapter":true,"standards":["Julia 官方风格指南","JET.jl","Aqua.jl"],"defects":["类型不稳定(JET)","索引从 1 开始","全局变量在热点路径"],"admission":{"unique":"多重分派与 JIT 的类型稳定性模型","identify":"类型不稳定 / 索引基 / 全局变量（JET.jl 可承接）"}},
+    {"key":"kotlin","kind":"pending","title":"Kotlin","tool":"detekt","probe":["detekt","--version"],"run":["kt-json","{root}"],"needs_adapter":true,"standards":["detekt 规则集","ktlint"],"defects":["按需补充"],"note":"仅在册；按 procedure 按需产出"},
+    {"key":"swift","kind":"pending","title":"Swift","tool":"swiftlint","probe":["swiftlint","version"],"run":["swift-json","{root}"],"needs_adapter":true,"standards":["SwiftLint 规则集","Swift API Design Guidelines"],"defects":["按需补充"],"note":"仅在册；按 procedure 按需产出"},
+    {"key":"dart","kind":"pending","title":"Dart","tool":"dart","probe":["dart","--version"],"run":["dart-json","{root}"],"needs_adapter":true,"standards":["Effective Dart","dart analyze"],"defects":["按需补充"],"note":"仅在册；按 procedure 按需产出"},
+    {"key":"csharp","kind":"pending","title":"C#","tool":"dotnet","probe":["dotnet","--version"],"run":["cs-json","{root}"],"needs_adapter":true,"standards":["Roslyn 分析器","Microsoft 设计准则"],"defects":["按需补充"],"note":"仅在册；按 procedure 按需产出"},
+    {"key":"php","kind":"pending","title":"PHP","tool":"phpstan","probe":["phpstan","--version"],"run":["php-json","{root}"],"needs_adapter":true,"standards":["PHPStan 规则","PSR-12"],"defects":["按需补充"],"note":"仅在册；按 procedure 按需产出"},
+    {"key":"ruby","kind":"pending","title":"Ruby","tool":"rubocop","probe":["rubocop","--version"],"run":["rb-json","{root}"],"needs_adapter":true,"standards":["RuboCop 规则集","Ruby 风格指南"],"defects":["按需补充"],"note":"仅在册；按 procedure 按需产出"},
+    {"key":"lua","kind":"pending","title":"Lua","tool":"luacheck","probe":["luacheck","--version"],"run":["lua-json","{root}"],"needs_adapter":true,"standards":["luacheck 规则集"],"defects":["按需补充"],"note":"仅在册；按 procedure 按需产出"}
+  ]
+}

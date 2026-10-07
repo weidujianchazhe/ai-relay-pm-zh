@@ -1,4 +1,4 @@
-# Agent Compatibility — ai-relay-project-management
+# Agent Compatibility — ai-relay-pm-zh
 
 面向**不会自动加载技能文件**的 Agent（如 Claude Code、Cursor 等纯编辑器 Agent）。
 
@@ -26,7 +26,7 @@
 
 | Skill | 触发关键词 | SKILL.md 路径 |
 |---|---|---|
-| ai-relay-project-management | 开工初始化、接手项目、存量接入、多 AI 协作、交接、审计、代码规范 | `{技能源包路径}/SKILL.md` |
+| ai-relay-pm-zh | 开工初始化、接手项目、存量接入、多 AI 协作、交接、审计、代码规范 | `{技能源包路径}/SKILL.md` |
 
 `{技能源包路径}` 替换为本技能实际所在目录。**该路径同时是项目 `MAP.md` 里 `[技能源包路径]` 的值**——两者必须一致（这是功能约定，不是可选项）。
 
@@ -65,7 +65,7 @@
 |---|---|---|
 | （由上一步扫描得到） | | |
 
-本项目启用协同工作区协议：任务卡驱动接手、快照式状态、分层索引、审计锚点。
+本项目启用管理区协议：任务卡驱动接手、快照式状态、分层索引、审计锚点。
 开工前读 SKILL.md，接入时读 LEGACY_ONBOARDING.md。
 <!-- /PROJECT_MGMT_SKILL -->
 ```

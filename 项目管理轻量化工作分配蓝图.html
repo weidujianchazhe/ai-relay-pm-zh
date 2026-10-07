@@ -3,540 +3,221 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 协作项目管理技能 · 设计蓝图（分页）</title>
+<title>AI 协作项目管理技能 · 使用说明</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:"PingFang SC","Microsoft YaHei","Segoe UI",Arial,sans-serif;background:#F4F3EE;color:#1A1B1C;line-height:1.75}
-  .wrap{display:flex;min-height:100vh;max-width:1400px;margin:0 auto}
-  nav{width:236px;flex:0 0 236px;background:#FFFFFF;border-right:1px solid #E4E3DD;padding:22px 16px;position:sticky;top:0;height:100vh;overflow:auto}
-  nav .brand{font-size:14px;font-weight:700;line-height:1.5;margin-bottom:4px}
-  nav .sub{font-size:11.5px;color:#6B7280;margin-bottom:16px}
-  nav a{display:block;font-size:13px;color:#374151;text-decoration:none;padding:7px 10px;border-radius:8px;margin-bottom:2px}
-  nav a:hover{background:#F4F3EE}
-  nav a.on{background:rgba(63,114,222,.10);color:#2B5BC9;font-weight:600}
-  nav a .n{display:inline-block;width:18px;color:#9EACEA;font-weight:700}
-  main{flex:1;min-width:0;padding:28px 34px 60px}
-  .page{display:none}
-  .page.on{display:block}
-  .hero{background:linear-gradient(135deg,rgba(163,213,232,.35),rgba(158,172,234,.25));border-radius:16px;padding:26px 30px;margin-bottom:20px}
-  .hero h1{font-size:23px;font-weight:700}
-  .hero p{font-size:13.5px;color:#4B5563;margin-top:8px}
-  h2{font-size:18px;font-weight:700;margin:0 0 12px}
-  .card{background:#FFF;border:1px solid #E4E3DD;border-radius:14px;padding:20px 24px;margin-bottom:16px}
-  h3{font-size:14.5px;font-weight:600;margin:16px 0 8px}
-  h3:first-child{margin-top:0}
-  p,li,td,th{font-size:13px}
-  .muted{color:#6B7280;font-size:12.5px}
-  ul,ol{margin:6px 0 6px 20px}
-  li{margin:3px 0}
-  pre{background:#F7F6F2;border:1px solid #E4E3DD;border-radius:10px;padding:13px 15px;font-size:12.5px;font-family:Consolas,"Courier New",monospace;overflow-x:auto;margin:8px 0;line-height:1.65}
-  table{width:100%;border-collapse:collapse;margin:8px 0}
-  th,td{border:1px solid #E4E3DD;padding:7px 10px;text-align:left;vertical-align:top}
-  th{background:#F1F0EB;font-weight:600}
-  code{background:#F1F0EB;border-radius:4px;padding:1px 5px;font-size:12px;font-family:Consolas,"Courier New",monospace}
-  .badge{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:20px;margin:0 6px 4px 0}
-  .b-green{background:rgba(58,154,26,.12);color:#2F7D12;border:1px solid #3A9A1A}
-  .b-orange{background:rgba(178,106,0,.1);color:#8A5200;border:1px solid #B26A00}
-  .b-blue{background:rgba(63,114,222,.1);color:#2B5BC9;border:1px solid #5B7FDE}
-  .b-red{background:rgba(200,60,60,.1);color:#A32424;border:1px solid #C05050}
-  .grid{display:flex;flex-wrap:wrap;gap:12px}
-  .grid>div{flex:1 1 240px;min-width:0}
-  .tile{background:#FBFBF9;border:1px solid #E4E3DD;border-radius:12px;padding:13px 15px}
-  .tile .num{font-size:20px;font-weight:700;color:#9EACEA}
-  .note{background:#F0F9F0;border:1px solid #9ED69E;border-radius:10px;padding:10px 14px;font-size:12.5px;margin:8px 0}
-  .warn{background:#FDF6EC;border:1px solid #E8C79A;border-radius:10px;padding:10px 14px;font-size:12.5px;margin:8px 0}
-  .danger{background:#FDF0F0;border:1px solid #E0A8A8;border-radius:10px;padding:10px 14px;font-size:12.5px;margin:8px 0}
-  .pager{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
-  .pager button{font:inherit;font-size:12.5px;padding:7px 16px;border:1px solid #E4E3DD;background:#FFF;border-radius:9px;cursor:pointer;color:#374151}
-  .pager button:hover{background:#F4F3EE}
-  .pager button:disabled{opacity:.4;cursor:default}
-  .pager .idx{font-size:12px;color:#6B7280}
-  .foot{font-size:12px;color:#6B7280;text-align:center;margin-top:22px}
-  @media(max-width:820px){.wrap{flex-direction:column}nav{width:auto;flex:none;height:auto;position:static;border-right:none;border-bottom:1px solid #E4E3DD}nav a{display:inline-block;margin:2px 4px 2px 0}main{padding:18px 16px 44px}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"PingFang SC","Microsoft YaHei","Segoe UI",Arial,sans-serif;background:#F4F3EE;color:#1A1B1C;line-height:1.75}
+.wrap{display:flex;min-height:100vh;max-width:1400px;margin:0 auto}
+nav{width:250px;flex:0 0 250px;background:#FFF;border-right:1px solid #E4E3DD;padding:22px 16px;position:sticky;top:0;height:100vh;overflow:auto}
+nav .brand{font-size:14px;font-weight:700;margin-bottom:4px}nav .sub{font-size:11.5px;color:#6B7280;margin-bottom:16px}
+nav a{display:block;font-size:13px;color:#374151;text-decoration:none;padding:7px 10px;border-radius:8px;margin-bottom:2px}
+nav a:hover{background:#F4F3EE}nav a.on{background:rgba(63,114,222,.10);color:#2B5BC9;font-weight:600}
+nav a .n{display:inline-block;width:20px;color:#9EACEA;font-weight:700}
+main{flex:1;min-width:0;padding:28px 34px 60px}.page{display:none}.page.on{display:block}
+.hero{background:linear-gradient(135deg,rgba(163,213,232,.35),rgba(158,172,234,.25));border-radius:16px;padding:26px 30px;margin-bottom:20px}
+.hero h1{font-size:23px}.hero p{font-size:13.5px;color:#4B5563;margin-top:8px}h2{font-size:18px;margin:0 0 12px}
+.card{background:#FFF;border:1px solid #E4E3DD;border-radius:14px;padding:20px 24px;margin-bottom:16px}
+h3{font-size:14.5px;margin:16px 0 8px}h3:first-child{margin-top:0}
+p,li,td,th{font-size:13px}.muted{color:#6B7280;font-size:12.5px}ul,ol{margin:6px 0 6px 20px}li{margin:3px 0}
+pre{background:#F7F6F2;border:1px solid #E4E3DD;border-radius:10px;padding:13px 15px;font-size:12.5px;overflow-x:auto;margin:8px 0;line-height:1.65}
+table{width:100%;border-collapse:collapse;margin:8px 0}th,td{border:1px solid #E4E3DD;padding:7px 10px;text-align:left;vertical-align:top}
+th{background:#F1F0EB;font-weight:600}code{background:#F1F0EB;border-radius:4px;padding:1px 5px;font-size:12px}
+.badge{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:20px;margin:0 6px 4px 0}
+.b-red{background:rgba(200,60,60,.1);color:#A32424;border:1px solid #C05050}
+.note{background:#FBFBF9;border-left:3px solid #B26A00;padding:10px 14px;border-radius:0 8px 8px 0;margin:10px 0;font-size:12.5px;color:#4B5563}
+details{margin:8px 0}summary{cursor:pointer;font-size:13px;font-weight:600;color:#2B5BC9}
+.pager{margin-top:18px;display:flex;align-items:center;gap:12px}
+.pager button{font:inherit;font-size:13px;padding:6px 14px;border:1px solid #E4E3DD;background:#FFF;border-radius:8px;cursor:pointer}
+.pager .idx{font-size:12px;color:#6B7280}.foot{margin-top:20px;font-size:12px;color:#9CA3AF}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <nav>
-    <div class="brand">AI 协作项目管理技能</div>
-    <div class="sub">设计蓝图 · 分页</div>
-    <a href="#p1" data-t="p1"><span class="n">1</span>总览</a>
-    <a href="#p2" data-t="p2"><span class="n">2</span>接手链路</a>
-    <a href="#p3" data-t="p3"><span class="n">3</span>门禁与脚本</a>
-    <a href="#p4" data-t="p4"><span class="n">4</span>产物与留痕</a>
-    <a href="#p5" data-t="p5"><span class="n">5</span>设计域</a>
-    <a href="#p6" data-t="p6"><span class="n">6</span>代码规范域</a>
-    <a href="#p7" data-t="p7"><span class="n">7</span>强耦合与不变量</a>
-    <a href="#p8" data-t="p8"><span class="n">8</span>边界与非目标</a>
-    <a href="#p9" data-t="p9"><span class="n">9</span>怎么用 / 反馈</a>
-  </nav>
-  <main>
-  <section class="page" id="p1">
-    <div class="hero">
-      <h1>AI 协作项目管理技能 · 设计蓝图</h1>
-  <p class='sub' style='margin:.5rem 0 0'>网页版蓝图（外部托管）：<a href='https://zyzep6f7.qwenwork.host/'>https://zyzep6f7.qwenwork.host/</a>　·　反馈邮箱：<a href='mailto:2576124003@qq.com'>2576124003@qq.com</a></p>
-      <p>一套让 AI 接手项目时「读得少、接得上、赖不掉」的协作协议。不绑定平台、不绑定语言、不依赖任何服务。</p>
-      <div style="margin-top:10px">
-        <span class="badge b-blue">协议正文 Markdown</span>
-        <span class="badge b-green">门禁＝Python 标准库脚本</span>
-        <span class="badge b-orange">无运行时依赖</span>
-      </div>
-    </div>
-    <div class="card">
-      <h2>核心命题</h2>
-      <p style="font-size:15px"><strong>项目可以复杂沉重，上手成本不随之增长。</strong></p>
-      <p class="muted" style="margin-top:6px">「上手成本」用<strong>字符</strong>量，不用文件数量——文件数恒定 ≠ 成本恒定。</p>
-    </div>
-    <div class="card">
-      <h2>解决什么问题</h2>
-      <table>
-        <tr><th style="width:42%">问题</th><th>本包的解法</th></tr>
-        <tr><td>换人 / 换 AI / 隔几周回来，要从头讲一遍背景</td><td><strong>指针链</strong>：任务卡 → 交接记录 → 索引；接手只读卡与它指向的那一篇</td></tr>
-        <tr><td>上下文越用越贵，读进来的东西一路付费</td><td><strong>容量上限</strong>：STATE 字数 · 索引热区行数 · 留痕尾部行数 · 单卡字符 · 接手包字符 · 蓝图长度</td></tr>
-        <tr><td>「我改好了」但没人能验证</td><td><strong>锚源原则</strong>：锚的值必须由被审计者之外产生（机器码 / 时钟 / commit 哈希）；声明不算证据</td></tr>
-        <tr><td>门禁写了没人跑，跑了也没人看</td><td><strong>脚本即门禁</strong>：退出码 0/1/2/3，并由<strong>变异自检</strong>证明它真的会红</td></tr>
-        <tr><td>规范写着，执行者不知道，评审也没标准</td><td><strong>判据（可机检）与风格（靠人读）分家</strong>，每条条款登记<strong>执行者</strong></td></tr>
-        <tr><td>大事没想清楚就动手，返工全废</td><td><strong>设计两件套</strong>：先一屏蓝图定方向，再补详述留理由；未批准不生成执行卡</td></tr>
+<nav>
+<div class="brand">AI 协作项目管理技能</div>
+<div class="sub">使用说明 · v4.0</div>
+      <a href="#p1" data-id="p1"><span class="n">01</span>这是什么</a>
+      <a href="#p2" data-id="p2"><span class="n">02</span>我能用它做什么</a>
+      <a href="#p3" data-id="p3"><span class="n">03</span>它解决什么问题</a>
+      <a href="#p4" data-id="p4"><span class="n">04</span>它是怎么工作的</a>
+      <a href="#p5" data-id="p5"><span class="n">05</span>从轻量到完整</a>
+      <a href="#p6" data-id="p6"><span class="n">06</span>设计 · 任务 · 状态 · 审计怎么连接</a>
+      <a href="#p7" data-id="p7"><span class="n">07</span>它不是什么</a>
+      <a href="#p8" data-id="p8"><span class="n">08</span>深入设计</a>
+      <a href="#p9" data-id="p9"><span class="n">09</span>开始使用 / 反馈</a>
+</nav>
+<main>
+    <section class="page" id="p1">
+      <div class="hero"><h1>AI 协作项目管理技能</h1><p>让 AI <b>持续参与一个真实的软件工程项目</b>，而不是每次重新认识项目。</p></div>
+      <div class="card"><h2>一句话</h2><p>它是一套<b>语言无关的软件工程管理协议</b> + 一组<b>确定性门禁脚本</b>：把项目的状态、设计、任务、实现、验证、交接<b>串成一条可追溯的链</b>；人手离开、AI 换人、会话中断之后，下一个接手者能<b>只读所需</b>接着干。</p>
+      <p class="muted">不绑定平台，不依赖任何服务，脚本只依赖 <b>Python 3 标准库</b>。</p></div>
+      <div class="card"><h2>它<b>不是</b>什么（先划边界）</h2>
+      <p><span class="badge b-red">不是</span> C++ / 算法 / UI 专家　<span class="badge b-red">不是</span> 自动监督 AI 的 Agent　<span class="badge b-red">不是</span> 替管理者裁决的系统　<span class="badge b-red">不是</span> 运行时常驻守护</p>
+      <p><b>它负责的是：让这些专业能力产生的工程结果，能够被持续管理。</b></p>
+      <div class="note">诚实声明：<b>允许能力不足，但不允许把不足伪装成有能力</b>——所有"没做 / 没接 / 没证据"都会显式写成 <code>[待核]</code>，而不是"看起来通过"。</div></div>
+    </section>
+    <section class="page" id="p2">
+      <div class="hero"><h1>我能用它做什么</h1><p>按「你遇到的问题 → 它提供的能力」看最快。</p></div>
+      <div class="card"><h2>问题 → 能力</h2><table>
+      <tr><th>你遇到的</th><th>它提供的</th></tr>
+      <tr><td>AI 换了 / 会话断了 / 几天后回来</td><td><b>项目接手与上下文恢复</b>（读得少、接得上）</td></tr>
+      <tr><td>多个 AI 同时工作</td><td><b>统一任务、状态、交接与留痕</b></td></tr>
+      <tr><td>项目越大，AI 越难读全</td><td><b>接手成本控制</b>：按<b>需要读取的内容量</b>计算，而不是按项目文件数量计算<span class="muted">（AI 的实际接手成本更接近需要读取的文本量）</span></td></tr>
+      <tr><td>设计想清楚了，执行时却忘了</td><td><b>设计 → 任务 → 实现</b> 的结构追踪</td></tr>
+      <tr><td>AI 说"已完成"但无法确认</td><td><b>门禁 · 证据 · 独立审计</b>（先证明门禁会红）</td></tr>
+      <tr><td>管理越来越乱</td><td><b>七种工程对象</b>：MAP / STATE / SKELETON / DESIGN / TASK / AUDIT / ARCHIVE</td></tr>
+      <tr><td>只想轻量用</td><td><b>四个子能力可独立使用</b></td></tr>
+      <tr><td>不同语言、不同专业能力</td><td><b>管理层与专业能力解耦</b>（语言只决定适配层）</td></tr>
+      </table></div>
+      <div class="card"><h2>四个子能力，可从任意一个开始</h2><table>
+      <tr><th>子能力</th><th>一句话</th><th>单独用</th></tr>
+      <tr><td><b>① 项目地图 MAP</b></td><td>项目在哪、代码在哪、按什么规则运转</td><td>✅ 一个文件即可</td></tr>
+      <tr><td><b>② 任务卡 TASK</b></td><td>现在做什么、谁在做、怎么算做完</td><td>✅ 单卡可用</td></tr>
+      <tr><td><b>③ 设计管理 DESIGN</b></td><td>把已论证的工程意图固化为可对照的基线</td><td>✅ 两件套可用</td></tr>
+      <tr><td><b>④ 代码质量护栏</b></td><td>只保下限（可机检判据），不封上限</td><td>✅ 脚本可单独拷贝</td></tr>
+      </table><div class="note">每个子能力都能单独用；但<b>组合起来</b>才有"接手成本不随项目增长"的效果。<b>需要多少，启用多少。</b></div></div>
+    </section>
+    <section class="page" id="p3">
+      <div class="hero"><h1>它解决什么问题</h1><p>核心命题：<b>项目可以复杂沉重，AI 接手只读所需。</b></p></div>
+      <div class="card"><h2>四类真实问题</h2><table>
+      <tr><th>问题</th><th>它的做法</th></tr>
+      <tr><td>重复解释项目</td><td>把状态<b>外置</b>成文件（MAP / STATE / 记录），而不是塞在对话历史里</td></tr>
+      <tr><td>交接靠嘴说</td><td>交接有固定块与机器戳；下一手按指针读，不重读全部</td></tr>
+      <tr><td>"完成了"无法验证</td><td>退出码即结论 + <b>变异自检</b>（先证明门禁会红）+ 独立复核</td></tr>
+      <tr><td>设计与实现脱节</td><td>设计<b>先于执行</b>；任务回链 DESIGN-ID；结构 ↔ 设计可追溯</td></tr>
+      </table></div>
+      <div class="card"><h2>适用 / 不适用（诚实版）</h2>
+      <h3>适用</h3><ul><li>需要长期、多轮、可能换 AI 接手的项目</li><li>需要留下"为什么这么做"的工程项目</li><li>多人 / 多会话共享同一份工程状态</li></ul>
+      <h3>不适用</h3><ul><li>单轮问答、写一段代码就走</li><li>纯技术咨询、与项目管理无关</li><li>已有完整体系、本次只做业务开发</li></ul>
+      <div class="note">单独使用任一子能力时<b>会缺哪些门禁</b>都有明确声明——见第 8 页与包内 <code>MANIFEST.md</code> 的「子能力与最小集」。</div></div>
+    </section>
+    <section class="page" id="p4">
+      <div class="hero"><h1>它是怎么工作的</h1><p>一句话：<b>它如何让 AI 持续工作？</b>按用户理解路径，七步。</p></div>
+      <div class="card">
+      <h3>① 项目先有地图</h3><p><b>MAP</b>：项目在哪、代码在哪、按什么规则运转。</p>
+      <h3>② 现在真实的结构是什么</h3><p><b>SKELETON</b>：<b>项目当前工程模型</b>——总体架构、模块关系、主路径、设计落在哪。<span class="muted">（同一份骨架两种阅读：HTML 给人、Markdown 给 AI）</span></p>
+      <h3>③ 每项工作有任务</h3><p><b>TASK</b>：现在做什么、改哪里、怎么算做完。</p>
+      <h3>④ 设计先于执行</h3><p><b>DESIGN</b>：已论证的工程意图——详述 <code>.md</code> + 蓝图 <code>.blueprint.html</code>。<b>定稿才允许生成任务卡。</b></p>
+      <h3>⑤ 每次工作产生交接状态</h3><p><b>REPORT / INDEX / STATE</b>：下一个接手者从哪里接着做。</p>
+      <h3>⑥ 实现必须留下可验证结果</h3><p><b>AUDIT / 门禁</b>：由脚本与独立复核回答，<b>不由"AI 说完成"回答</b>。</p>
+      <h3>⑦ 历史进入冷区</h3><p><b>ARCHIVE</b>：任务侧与设计侧<b>分开归档</b>，不干扰下一次接手，仍可追溯。</p>
+      <div class="note">产品核心就是这条链：<code>MAP → STATE → SKELETON → DESIGN → TASK → CODE → AUDIT → ARCHIVE</code><br>其中 <b>CODE 是实际工程实现，不属于管理对象</b>——七种工程对象（见第 6 页）负责管理它与其他工程状态之间的关系；所以这里有 8 个节点，而工程对象是 7 种。</div></div>
+    </section>
+    <section class="page" id="p5">
+      <div class="hero"><h1>从轻量到完整，怎么使用</h1><p><b>从轻到完整</b>：不确定就先小，需要再升级；升级是扩集，历史不回写。</p></div>
+      <div class="card"><h2>四级形态</h2><pre>单卡              一份任务卡 / 一份 MAP / 一份设计两件套     ← 只用子能力
+  ↓
+轻量工作区        加 INDEX / STATE / 交接记录
+  ↓
+完整工程管理      加设计基线 / 审计 / 归档 / 门禁脚本
+  ↓
+多 AI 多会话协作   加单写者约束 / 机器戳 / 并发控制</pre>
+      <div class="note">它<b>不要求</b>你一上来就建几十个文件——形态定错是唯一需要重建的决定，所以技能会<b>先问形态</b>。</div></div>
+      <div class="card"><h2>用户不需要记住脚本</h2><p>脚本负责<b>机械检查与重复劳动</b>；你只需要知道"什么时候该跑哪类检查"：</p>
+      <details><summary>项目状态检查（一屏全貌）</summary><p class="muted">overview.py</p></details>
+      <details><summary>任务提交检查（缺一不算提交）</summary><p class="muted">closeout.py · check_closeout.py</p></details>
+      <details><summary>索引与一致性检查</summary><p class="muted">check_index.py · reconcile.py</p></details>
+      <details><summary>代码质量检查（下限护栏）</summary><p class="muted">code_metrics.py · correctness_rules.py</p></details>
+      <details><summary>全盘审计与结构校验</summary><p class="muted">audit_all.py · validate_workspace.py</p></details>
+      <details><summary>门禁自检与外部工具接线</summary><p class="muted">selftest_gates.py · provider_gate.py · lang_gates.py · known_defects.py</p></details>
+      <details><summary>初始化与身份戳</summary><p class="muted">setup.py · stamp.py · new_local.py</p></details>
+      <div class="note">脚本清单<b>以目录为准</b>，本文不写死数量（手工清单必然漂移）。</div></div>
+    </section>
+    <section class="page" id="p6">
+      <div class="hero"><h1>设计 · 任务 · 状态 · 审计怎么连接</h1><p>v4.0 的工程认知模型：每个工程对象，都有它唯一的家。</p></div>
+      <div class="card"><h2>七种工程对象</h2><table>
+      <tr><th>对象</th><th>回答</th><th>主要承载</th></tr>
+      <tr><td><b>MAP</b></td><td>环境与规则</td><td><code>MAP.md</code></td></tr>
+      <tr><td><b>STATE</b></td><td>当前运行状态</td><td><code>STATE.md</code></td></tr>
+      <tr><td><b>SKELETON</b></td><td><b>项目当前工程模型</b></td><td><code>designs/SKELETON.html</code> + <code>SKELETON.md</code></td></tr>
+      <tr><td><b>DESIGN</b></td><td>工程意图与设计基线</td><td><code>designs/&lt;主题&gt;.md</code> + <code>.blueprint.html</code></td></tr>
+      <tr><td><b>TASK</b></td><td>执行计划</td><td><code>tasks/*</code>（回填 DESIGN-ID）</td></tr>
+      <tr><td><b>AUDIT</b></td><td>对实际结果的独立验证</td><td>门禁脚本 + 独立复核</td></tr>
+      <tr><td><b>ARCHIVE</b></td><td>历史事实</td><td><code>archives/</code>（任务）· <code>designs/archives/</code>（设计）<b>分开</b></td></tr>
+      </table></div>
+      <div class="card"><h2>四条容易忽略、但 v4.0 明确规定的规则</h2>
+      <h3>① 结构 ↔ 设计，双向可追溯</h3><p>关系建在<b>结构层</b>：<code>工程板块 / 模块 / 路径 ↔ SKELETON ↔ DESIGN-ID</code>。<b>不给每个代码文件绑 DESIGN-ID</b>——那只会制造负担。</p>
+      <h3>② 设计完成 ≠ 可以开工</h3><p>定稿只是"可以进入实施分析"。开工前要能回答两句：<b>这项工作在项目整体结构中的位置</b>、<b>实施依据什么结构</b>。答不出就不开工，或退回设计。</p>
+      <h3>③ 任务完成 ≠ 设计失效</h3><p>任务全做完，设计可能<b>仍是当前工程基线</b>，继续作为对照依据。</p>
+      <h3>④ 「暂不实施 · 基线保留」是合法状态</h3><p>设计可以<b>有效但不立即实施</b>（未来规划 / 架构基线 / 设计库存）——不产生任务、也不归档。<b>设计不是待办事项。</b></p>
+      <div class="note">设计变更时，必须登记<b>受影响结构</b>与<b>受影响任务</b>并写 EVENT-ID——<b>不得只改一个 Markdown</b>。</div></div>
+    </section>
+    <section class="page" id="p7">
+      <div class="hero"><h1>它不是什么</h1><p>这一页的意义：防止把它误认成"AI 自动项目管理 Agent"。</p></div>
+      <div class="card"><h2>明确的非目标</h2><table>
+      <tr><th>它不做</th><th>为什么</th></tr>
+      <tr><td><b>不实时监督 AI</b></td><td>监督是脚本层的事（确定性函数）；文档层只保证<b>事后可审计</b>——不拦你，但你做了什么一定留痕</td></tr>
+      <tr><td><b>不做运行时守护</b></td><td>不常驻、不挂进程；它是协议 + 可按需执行的脚本</td></tr>
+      <tr><td><b>不判语义</b></td><td>机器判不了的（注释质量、结构合理性、边界完备）交人或模型，并明确标注为<b>人检</b></td></tr>
+      <tr><td><b>不替人裁决</b></td><td>冲突裁决归项目登记的裁决者；系统只保证过程留痕</td></tr>
+      <tr><td><b>不实现平台能力</b></td><td>定时 / 可视化 / 报告强依赖平台：只给规范，不随包分发实现</td></tr>
+      <tr><td><b>不自研语言分析器</b></td><td>语法 / 类型 / 编译 / 静态分析交给成熟工具（ESLint / clang-tidy / clippy…）；本包只做编排与判据</td></tr>
+      </table></div>
+      <div class="card"><h2>它承认自己的能力边界</h2><ul>
+      <li><b>未接线的语言一律 <code>[待核]</code></b>——那是"不适用"，不是"不合格"</li>
+      <li><b>没有证据的结论不允许是"通过"</b>（数值 / 算法类尤其如此）</li>
+      <li><b>脚本崩溃（退出码 3）与项目检查失败（退出码 1）是两种状态</b>，不得混读</li>
+      <li>工具没装 → 报 <code>[待核] provider unavailable</code>，<b>技能不代装</b></li>
+      </ul></div>
+    </section>
+    <section class="page" id="p8">
+      <div class="hero"><h1>深入设计：为什么它这样设计</h1><p>读到这页，你已知道"是什么 / 能做什么 / 怎么用"；下面是"为什么"。</p></div>
+      <div class="card"><h2>为什么门禁必须能被故意打红</h2><p>一个永远返回 0 的脚本，和一条被删掉的检查，从输出上看不出区别。<b>所以顺序固定：先证明门禁活着，再拿它判别人。</b></p><p class="muted">对应口号：<b>能通过 ≠ 能变红</b>。</p></div>
+      <div class="card"><h2>为什么证据不能自报</h2><p><b>锚的值必须由被审计者之外产生。</b>姓名、自取的名字、自编短码都与声明同源，可任意填写；机器码、时钟、版本控制提交号与声明异源，才可作锚。</p><p class="muted">所以：人检标记只挂机器戳、不挂人名。</p></div>
+      <div class="card"><h2>为什么存在强耦合（且不许随意解耦）</h2><p>有些字段名、目录名、编号格式是<b>机器契约</b>——改名即破坏功能。它们看起来"只是几行"，实际是节点。</p><p class="muted">改动前必须回答六问（谁在读它、改后是否仍有等价路径、接手成本是否上升……）。</p></div>
+      <div class="card"><h2>为什么不做这些（设计上的克制）</h2><table>
+      <tr><th>不做</th><th>原因</th></tr>
+      <tr><td>不复制编译器能力</td><td>重复造轮子只会制造新噪声</td></tr>
+      <tr><td>不把工具默认值当标准</td><td>工具默认 → 候选证据 → 真实项目验证 → 才成为规则</td></tr>
+      <tr><td>不为"完整"增加机制</td><td>判据：<b>没有它，会不会导致某个工程职责无法可靠完成？</b>答案若只是"更方便" → 记为未来想法，不做</td></tr>
+      </table></div>
+      <div class="card"><h2>自相矛盾的地方，它会自己报</h2><p>四层载体契约（规范 → 模板 → 生成器 → 验证器）由机检守护：任一层偷偷退回旧载体，门禁<b>直接变红</b>。</p><p class="muted">同一事实穿过各层不得变形——这是它防"改了一半以为改完了"的方式。</p></div>
+    </section>
+    <section class="page" id="p9">
+      <div class="hero"><h1>开始使用</h1><p>从一句话开始：告诉我你要做什么，技能会<b>先判断形态</b>，再决定建多少结构。</p></div>
+      <div class="card"><h2>三种入口</h2><table>
+      <tr><th>你的情况</th><th>怎么开始</th></tr>
+      <tr><td>新项目</td><td>走初始化：定形态 → 建管理区 → 展开技能 → 跑结构校验</td></tr>
+      <tr><td>已经在做的项目</td><td>走<b>存量接入</b>：<b>轻量登记</b>（不深挖历史）→ 渐进整理；<b>首轮只做只读盘查，不作阻断</b></td></tr>
+      <tr><td>已经有管理区</td><td>直接接手：读 MAP / STATE → 认领任务 → 按指针读所需</td></tr>
       </table>
-    </div>
-    <div class="card">
-      <h2>由哪些部分组成（三层）</h2>
-      <pre>① 协议正文    references/                     答案都在这里；改协议改这里（权威源）
-② 门禁与工具  scripts/  ci/                   可执行、看退出码；机械步骤不手改共享文件
-③ 骨架与附录  templates/ adapters/ examples/  按需实例化 / 按栈落地 / 范例库骨架</pre>
-      <h3>四个可独立使用的子能力</h3>
-      <p class="muted">只要其中一件也行；最小集与「单独使用时缺哪些门禁」见 <code>MANIFEST.md</code>。</p>
-      <div class="grid" style="margin-top:8px">
-        <div class="tile"><strong>项目地图 MAP</strong><br><span class="muted">项目在哪 / 代码在哪 / 按什么规则运转 —— 一个文件即可用</span></div>
-        <div class="tile"><strong>任务卡</strong><br><span class="muted">一件事一张卡；单文件即可用，接上索引与门禁则升为工作区</span></div>
-        <div class="tile"><strong>设计卡</strong><br><span class="muted">先定方案：一屏蓝图给人看方向，详述留理由；未批准不生成执行卡</span></div>
-        <div class="tile"><strong>代码书写规范</strong><br><span class="muted">判据（可机检）+ 风格（靠人读）两本；脚本可单独拷进项目跑</span></div>
-      </div>
-    </div>
-    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx">1 / 9 · 总览</span><button onclick="step(1)">下一页 →</button></div>
-  </section>
-
-  <section class="page" id="p2">
-    <div class="hero"><h1>2 · 接手链路</h1><p>接手一项工作到底读什么、读多少、凭什么不增长。</p></div>
-    <div class="card">
-      <h2>指针链（承重墙）</h2>
-      <pre>任务卡「上次交接」 ──▶ reports/ 一篇交接记录 ──▶ 索引 [接力] 行</pre>
-      <ul>
-        <li>记录只写<strong>本任务需要的信息</strong>：不贴 diff、不复制代码。</li>
-        <li>索引行是<strong>入口</strong>不是内容：它保证「这个编号的活在哪一篇记录里」永远可查。</li>
-        <li>链条断了走恢复流程（补全 / 重连 / 标「数据待补」，<strong>禁止伪造</strong>）。</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h2>接手只做三件事</h2>
-      <pre>① 读任务卡        tasks/&lt;卡&gt;.md             定位工作，不漫读全项目
-② 沿指针读一篇    reports/&lt;卡上指向的那篇&gt;   不够用才多读
-③ 需要全局判断时  STATE.md / MAP.md          首次接手 / 跨模块 / 整体审视</pre>
-      <div class="note"><strong>读完即写回</strong>：把增量写进卡的「要点 / 已提炼」，保证<strong>每篇记录最多被读一次</strong>。</div>
-    </div>
-    <div class="card">
-      <h2>成本口径：单位是字符</h2>
-      <table>
-        <tr><th>项</th><th>实测某真实项目</th></tr>
-        <tr><td>单张任务卡</td><td>中位 <strong>5,445</strong> 字符 · 最大 <strong>22,002</strong></td></tr>
-        <tr><td>指针记录（一篇）</td><td>中位 <strong>3,505</strong> 字符</td></tr>
-        <tr><td>接手最小集（卡 + 记录）</td><td>中位 <strong>≈ 8,900</strong> 字符</td></tr>
-      </table>
-      <div class="warn">「一份卡 + 一篇记录」说的是<strong>读哪些</strong>，不是<strong>读多少</strong>。一份 22,002 字符的卡，就是 5,445 字符那份的 4 倍。<strong>读进来的东西会留在上下文里</strong>，跟着整场对话一起付费。</div>
-    </div>
-    <div class="card">
-      <h2>容量上限（都是上限，不是可扩容量）</h2>
-      <table>
-        <tr><th>封顶</th><th>管什么</th></tr>
-        <tr><td><code>capacity.state_max_chars</code></td><td>STATE 快照字数</td></tr>
-        <tr><td><code>capacity.index_hot_rows</code></td><td>索引热区行数</td></tr>
-        <tr><td><code>capacity.report_archive_threshold</code></td><td>reports 归档触发篇数</td></tr>
-        <tr><td><code>capacity.card_max_chars</code></td><td>单张任务卡字数（卡是定位与指针，不是档案）</td></tr>
-        <tr><td><code>capacity.onboarding_max_chars</code></td><td>接手包（卡 + 指针记录）字数</td></tr>
-        <tr><td><code>capacity.reviews_hot_lines</code></td><td>留痕尾部行数</td></tr>
-        <tr><td><code>capacity.blueprint_max_lines</code> · <code>blueprint_max_para_chars</code></td><td>设计蓝图长度与段落</td></tr>
-      </table>
-      <p class="muted">不得以「更完整 / 更全面」为由调大——这是容量上限的意义所在。量尺由 <code>overview.py</code> 的「接手包」一行给出。</p>
-    </div>
-    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx">2 / 9 · 接手链路</span><button onclick="step(1)">下一页 →</button></div>
-  </section>
-  <section class="page" id="p3">
-    <div class="hero"><h1>3 · 门禁与脚本</h1><p>门禁是什么、什么时候跑、凭什么信它。</p></div>
-    <div class="card">
-      <h2>分界线：调用即执行 / 常驻自动触发</h2>
-      <table>
-        <tr><th style="width:34%"></th><th>本包怎么做</th></tr>
-        <tr><td><strong>随包提供、默认启用</strong></td><td>协议正文、模板、<strong>可执行脚本</strong>（校验 / 提交门禁 / 索引镜像写 / 归档 / 对账 / 度量 / 机器戳）</td></tr>
-        <tr><td><strong>不实现、也不默认启用</strong></td><td>运行时守护进程、权限系统、定时或事件驱动地自动跑、把 AI 行为实时管住的持续监督</td></tr>
-      </table>
-      <div class="warn"><strong>为什么不做守护进程</strong>：① 需要运行时权限与平台能力，一打包就绑死平台；② 它承诺的是「防呆」——而防呆一旦失效，使用者会以为「有它在就不会错」，<strong>比没有更危险</strong>。本包换的是<strong>事后可审计</strong>：不拦你，但你做了什么一定会留痕。</div>
-    </div>
-    <div class="card">
-      <h2>退出码即结论</h2>
-      <pre>0 = 全通过        放行
-1 = 有[问题]      阻断（确定性不成立）
-2 = 仅[待核]      不阻断（无法确定性判定，交人或模型）
-3 = 脚本自身错误  阻断（脚本坏了和检查失败一样不能放行）</pre>
-      <p>输出三态 <code>[通过] / [问题] / [待核]</code>，另设 <code>[建议]</code>（只提示、<strong>不计数</strong>）。</p>
-      <div class="note"><strong>常量 [待核] 必须降级为 [建议]</strong>：设计上恒定成立的项若占用待核通道，会让「退出码 0」永不可达，门禁信号随之失效。</div>
-    </div>
-    <div class="card">
-      <h2>变异自检：先证明门禁会红</h2>
-      <p><code>selftest_gates.py</code> 注入故障，断言<strong>每个门禁在自己的故障下必须变红</strong>（用例数见脚本输出；秒级）。</p>
-      <div class="note"><strong>一个永远返回 0 的脚本，和一条被删掉的检查，从输出上看不出区别。</strong>所以流水线第一步不是跑门禁，而是证明门禁是活的。</div>
-    </div>
-    <div class="card">
-      <h2>形态 = 运行面</h2>
-      <table>
-        <tr><th>形态</th><th>提交流程</th><th>跑什么</th></tr>
-        <tr><td><strong>卡片模式</strong></td><td>不做（一行交接流水）</td><td>不跑脚本</td></tr>
-        <tr><td><strong>light 轻量工作区</strong></td><td><strong>三项</strong>：记录 / 卡 / 索引</td><td><code>closeout.py</code> → <code>check_closeout.py</code> · <code>check_index.py</code></td></tr>
-        <tr><td><strong>standard / coordination</strong></td><td><strong>四项</strong>（＋快照）</td><td>上面全部 ＋ <code>reconcile.py</code> · <code>validate_workspace.py</code> · <code>audit_all.py</code></td></tr>
-        <tr><td><strong>只写代码</strong></td><td>—</td><td><code>code_metrics.py</code></td></tr>
-      </table>
-      <p class="muted">多跑不只会浪费，还会制造噪声（例如给只有 MAP 的项目报「缺快照」）。完整矩阵见 <code>references/onboarding.md</code> §4.0。</p>
-    </div>
-    <div class="card">
-      <h2>脚本一览</h2>
-      <table>
-        <tr><th style="width:32%">脚本</th><th>作用</th></tr>
-        <tr><td><code>overview.py</code></td><td>一屏全貌（含接手包成本、人检账龄）—— <strong>视图，恒返回 0</strong></td></tr>
-        <tr><td><code>validate_workspace.py</code></td><td>结构、配置、人检标记与到期、设计区、容量口径</td></tr>
-        <tr><td><code>check_closeout.py</code></td><td>提交门禁（6+1 块 / 归档任务卡存在 / 索引已登记 / 快照）</td></tr>
-        <tr><td><code>check_index.py</code></td><td>索引完整性（编号 / 类型 / 指针 / 冷热一致）</td></tr>
-        <tr><td><code>reconcile.py</code></td><td>三方一致性（快照 ↔ 记录 ↔ 索引）+ 时间锚 + 容量</td></tr>
-        <tr><td><code>code_metrics.py</code></td><td>代码度量门禁；<code>--exemptions</code> 导出回查清单</td></tr>
-        <tr><td><code>closeout.py</code></td><td>机械步骤：建卡 / 记录骨架 / 索引镜像写 / 归档 / 设计归档 / 留痕滚动</td></tr>
-        <tr><td><code>audit_all.py</code></td><td>全盘核查入口：编排 + 机器戳留痕 + 超期自查</td></tr>
-        <tr><td><code>setup.py</code></td><td>首次配置向导（四问：git 备份 / 核查周期 / 工作流外脚本 / 首张卡）</td></tr>
-        <tr><td><code>stamp.py</code></td><td>机器戳与 AI 标识（时间锚 / 身份锚）</td></tr>
-        <tr><td><code>new_local.py</code></td><td>项目专属脚本脚手架</td></tr>
-        <tr><td><code>selftest_gates.py</code></td><td>门禁变异自检</td></tr>
-      </table>
-      <p class="muted">即插即用：原样复制即可，不改路径（全部来自参数）、不改阈值（取自实例 MAP → config）、<strong>仅依赖 Python 3 标准库</strong>。</p>
-    </div>
-    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx">3 / 9 · 门禁与脚本</span><button onclick="step(1)">下一页 →</button></div>
-  </section>
-
-  <section class="page" id="p4">
-    <div class="hero"><h1>4 · 产物与留痕</h1><p>有哪些产物、哪些名字不能改、留痕该怎么读。</p></div>
-    <div class="card">
-      <h2>工作区产物</h2>
-      <pre>{WORKSPACE_ROOT}/&lt;项目名&gt;/
-├── SKILL.md / MANIFEST.md / config.yml     入口与配置（随包复制）
-├── references/  scripts/                   协议正文与门禁副本（逐字复制，不改）
-├── MAP.md      环境 / 规则 / 协议速记 / 路径注册表（低频写，永不记进展）
-├── STATE.md    当前快照（人读区 3 行 + AI 区；字段级更新，禁整文件覆盖）
-├── REVIEWS.md  元数据通道：复盘 / 版本 / 恢复登记（追加式）
-├── tasks/      任务卡（每卡一文件）
-├── reports/    交接记录（每次提交一篇）
-├── INDEX.md    索引热区（最近若干行）
-├── designs/    设计区（详述 + 蓝图；archives/ 放走完流程的）
-├── examples/   范例库（按需；project/ 与 external/ 两分区）
-├── archives/   INDEX_archived.md（冷区全量）+ done/（完成卡）
-└── tools/      可选工具区（只放规范）</pre>
-    </div>
-    <div class="card">
-      <h2>冻结区（<span style="color:#A32424">改名即破坏功能</span>）</h2>
-      <table>
-        <tr><th>类别</th><th>冻结值</th><th>谁在消费</th></tr>
-        <tr><td>任务卡字段</td><td>承接 · 进度锚点 · 上次交接 · 已提炼 · 代码根路径 · 涉及 · 设计偏离 · 派发摘录 · 验收状态</td><td>指针校验 / 断链修复 / 提交门禁</td></tr>
-        <tr><td>交接 6+1 块名</td><td>本次需求 · 本次涉及工程信息 · 改动点 · 验证结果 · 数据影响 · 下一步 · 任务卡更新</td><td>提交门禁逐块校验</td></tr>
-        <tr><td>索引列</td><td>编号 · 日期 · 类型 · 主题 · AI · 交接文件</td><td>索引校验 / 指针悬空检测</td></tr>
-        <tr><td>类型标记</td><td>[接力] [完成] [废弃] [里程碑]</td><td>索引类型校验</td></tr>
-        <tr><td>编号格式</td><td>分支码 XX0000（两位大写字母 + 4~5 位数字）</td><td>编号校验 / 审计 ID 锚</td></tr>
-        <tr><td>设计区文件名</td><td>详述 &lt;主题&gt;.md · 蓝图 &lt;主题&gt;.blueprint.md</td><td>成对性校验 / 设计归档</td></tr>
-        <tr><td>目录名</td><td>tasks/ reports/ archives/ archives/done/ designs/ designs/archives/ tools/ references/ scripts/ scripts/local/</td><td>全部脚本 / MAP 路径注册表</td></tr>
-      </table>
-    </div>
-    <div class="card">
-      <h2>留痕不是读物</h2>
-      <p><strong>留痕</strong>（审计与追责的原料）与<strong>读物</strong>（手册 / 快照 / 卡）是两类东西。把留痕当读物，成本随项目年龄线性增长。</p>
-      <table>
-        <tr><th>留痕产物</th><th>读取面</th><th>封顶 / 处置</th></tr>
-        <tr><td><code>REVIEWS.md</code></td><td>只读尾部若干行</td><td><code>capacity.reviews_hot_lines</code>，超限跑 <code>closeout.py reviews-archive</code></td></tr>
-        <tr><td><code>reports/</code></td><td>只读卡上指向的那一篇</td><td>归档阈值，超限跑 <code>closeout.py archive-reports</code></td></tr>
-        <tr><td><code>archives/INDEX_archived.md</code></td><td>按编号定点查</td><td>冷区不设上限（它不被整读）</td></tr>
-        <tr><td><code>designs/archives/</code></td><td>按主题定点查</td><td>活跃设计区由归档保持清空</td></tr>
-      </table>
-      <div class="note"><strong>写可以无限追加，读只读尾部。</strong>完整性由冷区保证，阅读成本由热区上限保证。</div>
-      <h3>档案红线</h3>
-      <ul>
-        <li><code>reports/</code> 与 <code>archives/</code> 下文件<strong>禁删禁移</strong>；唯一例外＝归档流程，且<strong>移后必须同步索引行指向</strong>。</li>
-        <li><code>REVIEWS.md</code> 只追加；滚动归档只做「先写冷区、后截热区」，<strong>不删除任何内容</strong>。</li>
-        <li><strong>数据诚实边界</strong>：恢复不出的内容标「数据待补」，<strong>禁止伪造</strong>。</li>
-      </ul>
-    </div>
-    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx">4 / 9 · 产物与留痕</span><button onclick="step(1)">下一页 →</button></div>
-  </section>
-  <section class="page" id="p5">
-    <div class="hero"><h1>5 · 设计域</h1><p>要先定方案时怎么做，为什么是两份文件。</p></div>
-    <div class="card">
-      <h2>一份设计 = 两份文件</h2>
-      <table>
-        <tr><th>文件</th><th>收什么</th><th>谁看</th><th>变化节奏</th></tr>
-        <tr><td><strong>详述</strong> <code>designs/&lt;主题&gt;.md</code></td><td>叙述：范围 / 非目标 / 不变式 / 迁移与回滚 / 验证证据 / 决策理由</td><td>AI 执行时对照</td><td><strong>定点改</strong>，只动受影响的行</td></tr>
-        <tr><td><strong>蓝图</strong> <code>designs/&lt;主题&gt;.blueprint.md</code></td><td>结构：模块与依赖图 / 文件清单 / 数据流 / 改动点 / 里程碑</td><td><strong>人看</strong>（确认方向）</td><td><strong>整篇重写</strong>，一轮一版</td></tr>
-      </table>
-      <div class="note"><strong>判定一段话该放哪一份</strong>：能画出来的放蓝图，只能讲清楚的放详述。蓝图里出现长段落＝放错了位置；详述里出现框图和清单＝重复维护（迟早漂移）。</div>
-    </div>
-    <div class="card">
-      <h2>成本纪律（设计对话为什么贵，怎么省）</h2>
-      <p><strong>诊断</strong>：贵不在写长文，在<strong>每轮修订都重新输出全文</strong>——方向未定时的长文，方向一变全废。</p>
-      <pre>① 先蓝图、后详述    方向没定之前不写详述（蓝图短、改得快、给人看得懂）
-② 蓝图整篇重写      每轮固定输出物是蓝图（一屏）；详述只吃增量，禁止整篇重发
-③ 改动留一行为什么  改详述时补一行「&gt; 修订：&lt;理由&gt;（&lt;机器戳&gt;）」</pre>
-    </div>
-    <div class="card">
-      <h2>生命周期与批准门禁</h2>
-      <pre>草案 → 评审中 → 已批准 / 已拒绝 / 已废弃</pre>
-      <ul>
-        <li><strong>只有「已批准」的设计卡才能生成执行任务卡</strong>；执行卡回填 <code>DESIGN-ID</code>。</li>
-        <li><strong>拆卡</strong>：一张设计卡可拆成多张执行卡；拆出的每个 <code>TASK-ID</code> 登记回设计卡的「拆分出的执行卡」字段——这个字段是<strong>归档门禁的判据</strong>，不是备注。</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h2>设计区与设计归档</h2>
-      <pre>designs/                  ← 活跃设计
-    &lt;主题&gt;.md             ← 详述
-    &lt;主题&gt;.blueprint.md   ← 蓝图
-    archives/             ← 设计归档（详述与蓝图一起移）</pre>
-      <table>
-        <tr><th>归档触发条件</th><th>机器判据</th></tr>
-        <tr><td>① <strong>已拆分成全部任务</strong></td><td>状态＝已批准 且「拆分出的执行卡」非「—」且每个 TASK-ID 都能在 tasks/ 或 archives/done/ 找到</td></tr>
-        <tr><td>② <strong>设计作废</strong></td><td>状态 ∈ {已废弃, 已拒绝}</td></tr>
-      </table>
-      <div class="warn"><strong>为什么归档留在设计区、不进工作记录归档区</strong>：工作记录归档区的语义是「这件事做完了」，是接手的证据链；设计卡走完流程后<strong>对后续接手没有价值</strong>——接手要的是「这张卡怎么干」，不是「当初为什么这么定」。但它对复盘有价值，所以<strong>只移区、不删除</strong>，按留痕定点查。</div>
-    </div>
-    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx">5 / 9 · 设计域</span><button onclick="step(1)">下一页 →</button></div>
-  </section>
-
-  <section class="page" id="p6">
-    <div class="hero"><h1>6 · 代码规范域</h1><p>写代码的规矩有几本、谁在执行、范例从哪来。</p></div>
-    <div class="card">
-      <h2>两本，按判据形态分家</h2>
-      <table>
-        <tr><th>文件</th><th>收什么</th><th>形态</th></tr>
-        <tr><td><code>references/code-quality.md</code></td><td>三档阈值 / 豁免机制 / 覆盖率 / 依赖方向 / 异常自愈 / 注释规范</td><td><strong>有阈值、可机检</strong>，违反即打回</td></tr>
-        <tr><td><code>references/code-style.md</code></td><td>命名 / 版面 / 抽象复用 / 重构三回合 / 范例库 / 提交信息</td><td><strong>靠人读</strong>，评审时对照</td></tr>
-      </table>
-      <p class="muted">级别（[强制]/[推荐]/[参考]）说的是「违反的后果」，不是「能不能机检」——两本都会出现 [强制]。</p>
-    </div>
-    <div class="card">
-      <h2>三档语义（唯一一套数值）</h2>
-      <table>
-        <tr><th>档</th><th>含义</th><th>落点</th></tr>
-        <tr><td><strong>推荐线</strong></td><td>理想目标，不强制</td><td>静态分析平台与人工评审提示</td></tr>
-        <tr><td><strong>预警区</strong></td><td>允许存在，<strong>但必须写明未拆分原因</strong></td><td>不阻断；理由由定期回查判真伪</td></tr>
-        <tr><td><strong>拦截线</strong></td><td>只卡明显失控的代码</td><td>流水线以非零退出码阻断</td></tr>
-      </table>
-      <p><strong>工具只配拦截线</strong>：配两套数值必然互相矛盾；用流水线阻断「未达推荐线」会把规范变成官僚成本。数值唯一权威＝实例 MAP 规则段 → <code>config/defaults.yml</code>。</p>
-    </div>
-    <div class="card">
-      <h2>每条条款都要有执行者</h2>
-      <p>四类：<strong>脚本</strong>（本包机检）· <strong>平台</strong>（CI / 静态分析 / 覆盖率）· <strong>人检</strong>（判断类）· <strong>未实现</strong>（规范债务）。</p>
-      <div class="note">没有执行者的条款等于没有条款——<code>gen_views.py</code> 第 7 节核对：正文引用了却没登记执行者的键会报红。</div>
-      <table>
-        <tr><th>已由脚本机检</th><th>由平台 / 人执行</th></tr>
-        <tr><td>函数行数 · 嵌套 · 圈复杂度 · 文件长度 · 注释密度 · 豁免理由真伪 · 扫描覆盖 · 依赖方向</td><td>覆盖率（CI 工具）· 豁免回查（人检）· 重复代码提取线（评审锚点）</td></tr>
-      </table>
-      <h3>约束对象的边界</h3>
-      <ul>
-        <li>受约束的是<strong>项目业务代码</strong>（交付物本身）；</li>
-        <li><strong>技能包自带的工作流 / 工具脚本不在门禁范围内</strong>——它们的正确性由变异自检保证，不由三档阈值保证；</li>
-        <li>需要时仍可手工度量，那些读数是<strong>参考</strong>，不构成「违反本规范」。</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h2>范例库：两个分区，必须分开</h2>
-      <table>
-        <tr><th>分区</th><th>放什么</th><th>入库门槛</th><th>用途</th></tr>
-        <tr><td><code>examples/project/</code></td><td>本项目自己沉淀的范例</td><td><strong>必须过流水线 + 评审</strong></td><td>可当模板抄</td></tr>
-        <tr><td><code>examples/external/</code></td><td>外部参考（别处看到的好代码）</td><td>不要求在通过状态，但<strong>必须登记来源与许可</strong></td><td><strong>恒为「参考·未验证」</strong>，只作参考</td></tr>
-      </table>
-      <p class="muted">混放等于把<strong>未验证的东西</strong>标成项目标准。要当模板的唯一路径：改写进本项目 → 过流水线与评审 → 作为 <code>project/</code> 条目重新入库。</p>
-    </div>
-    <div class="card">
-      <h2>落地与机检</h2>
-      <ul>
-        <li>按栈落地：<code>adapters/python|java|javascript.md</code>（工具映射 + 阈值→参数 + 可复制配置样例）；</li>
-        <li>流水线接线：<code>ci/</code>（Python 一份、多语言一份；<strong>先跑变异自检证明门禁活着</strong>，再跑核查）；</li>
-        <li>机检脚本：<code>scripts/code_metrics.py</code>（可单独拷进项目使用，阈值有脚本内兜底且与 config 逐键对齐）。</li>
-      </ul>
-      <div class="note"><strong>非 Python 项目不自研度量</strong>：各栈用成熟工具（ESLint / Checkstyle / JaCoCo…），本包只给接线样板与统一退出码约定——自研跨语言度量必然靠行 / 缩进启发式，<strong>误报会掩盖真问题</strong>。</div>
-    </div>
-    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx">6 / 9 · 代码规范域</span><button onclick="step(1)">下一页 →</button></div>
-  </section>
-  <section class="page" id="p7">
-    <div class="hero"><h1>7 · 强耦合与不变量</h1><p>改这个技能之前必读的一页。下面这些耦合是<strong>有意的</strong>——解开会直接破坏功能。</p></div>
-    <div class="card">
-      <h2>判据：先说清什么是坏耦合、什么是好耦合</h2>
-      <table>
-        <tr><th>类型</th><th>特征</th><th>处置</th></tr>
-        <tr><td><strong>坏耦合</strong></td><td>一处改动要靠<strong>人记住</strong>去同步另一处</td><td>解耦（或改成机器可查）</td></tr>
-        <tr><td><strong>好耦合 / 功能契约</strong></td><td>A 存在是因为 B 要读它；<strong>改 A 必须同步改 B</strong>，且机器读得到</td><td><strong>禁止解耦</strong>，必须登记</td></tr>
-      </table>
-      <div class="danger">一句话：<strong>要靠人记住去同步＝坏耦合；机器读得到、改一处必须改另一处＝好耦合。</strong></div>
-    </div>
-    <div class="card">
-      <h2>禁止解耦清单（解开会怎样）</h2>
-      <table>
-        <tr><th style="width:30%">契约</th><th style="width:30%">谁在读它</th><th>解开会怎样</th></tr>
-        <tr><td><strong>任务卡字段名 / 交接块名</strong></td><td>提交门禁、指针校验、断链修复、恢复流程</td><td>门禁逐块校验全失效；指针链断；恢复无从下手</td></tr>
-        <tr><td><strong>实例 MAP 规则段的配置标签</strong></td><td>全部脚本的取值顺序</td><td>脚本读不到阈值 → 回落出厂默认 → 每个项目被迫用同一套数值</td></tr>
-        <tr><td><strong>记录指针链</strong>（卡 → 记录 → 索引行）</td><td>接手流程、对账、恢复</td><td>「接手只读两处」的承重墙倒塌，成本重新随项目规模增长</td></tr>
-        <tr><td><strong>索引冷热镜像写与移行规则</strong></td><td>索引校验、归档、接手</td><td>冷热计数对不上；[接力] 行被移出 → 接手断链</td></tr>
-        <tr><td><strong>速查表 ↔ 细则</strong></td><td>任务简报、接手者</td><td>高频规则不再就地可读，每次都要翻全文</td></tr>
-        <tr><td><strong>冻结目录名 / 设计区文件名</strong></td><td>全部脚本、MAP 路径注册表</td><td>脚本找不到文件；设计两件套成对性失效</td></tr>
-        <tr><td><strong><code>scripts/</code> ↔ <code>scripts/local/</code> 边界</strong></td><td>升级流程</td><td>项目专属脚本被升级覆盖（丢工作）；或项目改动混进包内</td></tr>
-        <tr><td><strong>可选能力开关</strong>（设计卡 / 稳定 ID / 角色矩阵）</td><td>协作模式、校验脚本</td><td>能力开关是按需启用，不是复杂度；删掉等于砍掉升级路径</td></tr>
-      </table>
-    </div>
-    <div class="card">
-      <h2>改造门禁（六条，缺一不得动手）</h2>
-      <pre>① 目的    —— 说清要解决什么；说不出就停
-② 交叉影响 —— grep 全包列出同步清单（字段名 / 块名 / 路径改名必做）
-③ 体量    —— 只加现有机制覆盖不了的
-④ 反例    —— 想清楚它会怎么被误用
-⑤ 可执行  —— 能机检的给脚本，不能的标 #人检
-⑥ 回滚    —— 说清怎么退回去</pre>
-      <div class="warn"><strong>冲突即提醒（强制义务）</strong>：拟议改动与门禁或功能契约冲突时，必须主动向用户显式提醒，写明冲突的是哪条原则、改了会伤哪个功能、负担加在哪；<strong>未经明确确认不得执行</strong>。</div>
-    </div>
-    <div class="card">
-      <h2>核心不变量（不得删除 / 弱化 / 改语义）</h2>
-      <pre>1. 记录指针链：卡「上次交接」→ 记录「下一步」→ 索引 [接力] 行
-2. 分层索引：热区只留最近若干行，冷区保有全量；行移入不删除
-3. 每篇记录最多被读一次（读后写回卡）
-4. 档案只进不出（唯一例外＝归档流程，且移后同步索引指向）
-5. 数据诚实边界：恢复不出的标「数据待补」，禁止伪造</pre>
-    </div>
-    <div class="card">
-      <h2>审计锚源原则</h2>
-      <p><strong>锚的值必须由被审计者之外产生。</strong>自报的值（人名、自选编号）不构成锚。</p>
-      <table>
-        <tr><th>锚</th><th>产生者</th><th>强度</th></tr>
-        <tr><td>时间锚</td><td>时钟（写戳即产生）</td><td>中；与 commit 时间互证可升强</td></tr>
-        <tr><td>ID 锚</td><td>编号规则 + 索引全量</td><td>中；靠全量可查</td></tr>
-        <tr><td>身份锚</td><td><code>stamp.py --ai-id</code>（平台 + 机器码）</td><td>有 git 时为强，无 git 为弱（能写文件者也能写同形戳）</td></tr>
-        <tr><td>凭证锚</td><td>版本控制的 commit 哈希</td><td><strong>强</strong>——唯一能到强档的锚</td></tr>
-      </table>
-      <p class="muted">这条原则管着三处设计：人检标记不写人名（写机器戳）、开关的承诺由痕迹核实（不靠声明）、身份标识由脚本产生（AI 不得自报）。</p>
-    </div>
-    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx">7 / 9 · 强耦合与不变量</span><button onclick="step(1)">下一页 →</button></div>
-  </section>
-
-  <section class="page" id="p8">
-    <div class="hero"><h1>8 · 边界与非目标</h1><p>它不做什么、要什么前提、单独用时缺哪些门禁。写清楚边界不是谦虚——缺门禁要让人知道，不能让人以为还有。</p></div>
-    <div class="card">
-      <h2>使用前提</h2>
-      <p>只有两条：<strong>本地文件系统</strong> + <strong>命令 / 文件执行能力</strong>（能落盘目录、读写任务卡与记录）。</p>
-      <p><strong>平台无关</strong>：不依赖任何平台私有接口、技能系统或 API——技能系统有则装，无则按文档读取。</p>
-      <h3>不适用</h3>
-      <ul><li>无本地文件能力的场景：网页对话 / 移动端 / 纯对话 / API 裸调；</li><li>单轮问答与代码片段生成（本包管的是跨会话接续）。</li></ul>
-    </div>
-    <div class="card">
-      <h2>不做什么（设计上的非目标）</h2>
-      <table>
-        <tr><th style="width:34%">不做</th><th>为什么</th></tr>
-        <tr><td><strong>实时监督 AI</strong></td><td>文档协议做不到；监督是脚本层的职责。文档层换的是<strong>事后可审计</strong>：不拦你，但你做了什么一定留痕</td></tr>
-        <tr><td><strong>运行时守护进程 / 权限系统</strong></td><td>需要平台能力，一打包就绑死平台；且它承诺「防呆」，一旦失效比没有更危险</td></tr>
-        <tr><td><strong>判语义</strong></td><td>脚本只回答确定性判据；语义类一律输出 [待核] 交人或模型——<strong>误报掩盖真实问题是门禁的首要失效原因</strong></td></tr>
-        <tr><td><strong>替人裁决</strong></td><td>冲突、废弃、归档的争议由管理者裁定；脚本只给证据与状态</td></tr>
-        <tr><td><strong>平台定时 / 可视化 / 报告实现</strong></td><td>强依赖平台，只登记规范（<code>tools/</code>），不随包实现</td></tr>
-      </table>
-    </div>
-    <div class="card">
-      <h2>单独使用时的门禁缺口（诚实声明）</h2>
-      <table>
-        <tr><th>子能力</th><th>单独使用时缺什么</th></tr>
-        <tr><td><strong>只有 MAP</strong></td><td>无快照一致性校验（没有 STATE / 记录 / 索引可对账）</td></tr>
-        <tr><td><strong>单文件任务卡</strong></td><td>全部门禁都不跑（无索引、无快照、无归档）——一个文件就是全部，靠人读卡</td></tr>
-        <tr><td><strong>只拷 <code>code_metrics.py</code></strong></td><td>读不到实例 MAP 的阈值，用脚本内兜底值（与 <code>config/defaults.yml</code> 逐键一致）</td></tr>
-        <tr><td><strong>设计卡单独用</strong></td><td>无批准门禁强制（协作模式开关关闭时，设计卡可当方案笔记用）</td></tr>
-      </table>
-    </div>
-    <div class="card">
-      <h2>四档形态（standard / coordination 合并一行）的边界（升级即扩集，历史不回写）</h2>
-      <table>
-        <tr><th>形态</th><th>有什么</th><th>没有什么</th></tr>
-        <tr><td><strong>卡片模式</strong></td><td>一个卡片文件</td><td>索引 / 快照 / 记录 / 脚本 / 门禁</td></tr>
-        <tr><td><strong>light 轻量工作区</strong></td><td>任务卡 + 交接记录 + 索引（含冷区）+ 设计区（按需）</td><td>MAP / STATE / REVIEWS</td></tr>
-        <tr><td><strong>standard / coordination</strong></td><td>上面全部 + MAP / STATE / REVIEWS</td><td>—</td></tr>
-      </table>
-      <div class="note">从严到宽，不从宽到严：先按能跑的最小形态起步，发现不够再升。反过来先建全套再降级，只会留下无人维护的空档案——<strong>空档案比没有档案更坏，它制造「已管理」的错觉</strong>。</div>
-    </div>
-    <div class="card">
-      <h2>脚本的适用边界</h2>
-      <ul>
-        <li>门禁脚本<strong>只读不写</strong>（overview / validate_workspace / check_closeout / check_index / reconcile / code_metrics），可多进程、多 AI 同时跑；</li>
-        <li>写工作区的脚本（<code>closeout.py</code> 各子命令）<strong>不可并发</strong>：同一工作区同一时刻只允许一个写者；</li>
-        <li>崩溃退出码为 3，与「有 [问题]」分开——<strong>别把脚本崩了读成项目有问题</strong>。</li>
-      </ul>
-    </div>
-    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx">8 / 9 · 边界与非目标</span><button onclick="step(1)">下一页 →</button></div>
-  </section>
-
-  <section class="page" id="p9">
-    <div class="hero"><h1>9 · 怎么用 / 反馈</h1><p>第一次对话怎么开始，遇到问题往哪儿说。</p></div>
-    <div class="card">
-      <h2>从哪儿开始用</h2>
-      <pre>第一次对话     判定形态（卡片 / light / standard）        references/onboarding.md §1
-写代码         速查卡 + 判据 + 跑一次度量                references/cheatsheet.md
-接手一项工作   读卡 → 沿指针读一篇记录 → 需要时读 STATE   SKILL.md 接手只做三件事
-提交           提交流程（三项或四项，看形态）→ 跑提交门禁  references/workflow.md §4
-改这个技能     先过改造门禁六条                          references/change-control.md §A</pre>
-    </div>
-    <div class="card">
-      <h2>四个子能力，单独用也行</h2>
-      <p>只要其中一件也可以：地图一个文件即成立；单文件任务卡不跑任何脚本；设计卡两份文件即成立；代码规范可只拷两个脚本进项目。</p>
-      <p class="muted">各自的<b>最小文件集</b>与<b>单独使用时失效的门禁</b>，见 <code>MANIFEST.md</code> 的「子能力与最小集」——缺口写在明处，不让人以为还有。</p>
-    </div>
-    <div class="card">
-      <h2>反馈</h2>
+      <div class="note">存量项目特别注意：<b>先抽样 → 精度抽检 → 基线冻结为豁免</b>，之后<b>只对新改动启用阻断</b>；否则等于"用新噪声替换旧噪声"。</div></div>
+      <div class="card"><h2>包结构一览（数量以目录为准）</h2><pre>SKILL.md / MANIFEST.md / BLUEPRINT.md / LEGACY_ONBOARDING.md   入口层
+references/   协议正文（权威源）                                   答案层
+scripts/      门禁与工具脚本 + local/（项目自定义）                 执行层
+designs/      设计区：SKELETON / 详述 .md / 蓝图 .blueprint.html / archives/
+adapters/     按栈落地附录（各栈一份）
+config/       defaults.yml（出厂默认）+ providers.json（Provider 档案正本）
+templates/    骨架（MAP/STATE/INDEX/REVIEWS/任务卡/设计卡+蓝图/SKELETON）
+examples/     范例库骨架     ci/ 流水线样板     tools/ 可选工具规范
+archives/     归档（只进不出） locales/ 展示文案</pre></div>
+      <div class="card"><h2>能力边界（诚实清单）</h2><ul>
+      <li>单用 MAP：缺任务流、缺交接、缺审计</li>
+      <li>单用任务卡：缺索引、缺快照、缺提交门禁</li>
+      <li>单用 <code>code_metrics.py</code>：阈值有脚本内兜底，但<b>与 config 的逐键一致性失去机检</b></li>
+      <li>脚本崩溃（3）≠ 项目检查失败（1）</li>
+      </ul><p class="muted">这些边界不会因为你没读文档而消失——所以它们被写在最显眼的地方。</p></div>
+      <div class="card"><h2>反馈</h2>
       <p>用这个技能遇到问题、或有改进建议，请发邮件到 <strong>2576124003@qq.com</strong>。</p>
-      <ul>
-        <li>项目<strong>内部</strong>的问题先记进工作区 <code>REVIEWS.md</code>（元数据通道，追加式），提级时一并附上；</li>
-        <li>属于<strong>包本身</strong>的缺陷（条款矛盾、脚本误报、门禁失效）请直接发信，并尽量附上：跑的哪个脚本、退出码、能复现的最小形态。</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h2>包结构一览</h2>
-      <pre>SKILL.md / MANIFEST.md / README.md / BLUEPRINT.md / LEGACY_ONBOARDING.md   入口层
-references/   14 份协议正文（权威源）                                        答案层
-scripts/      20 个脚本 + local/（项目自定义，升级不覆盖）                    执行层
-blueprint/    设计蓝图分页 02~08（第 1 页即 BLUEPRINT.md）                    展示层
-templates/    9 份骨架（MAP/STATE/INDEX/REVIEWS/任务卡/设计卡+蓝图/交接/单文件卡）
-adapters/     按栈落地附录（python / java / javascript）
-examples/     范例库骨架（project/ 与 external/ 两分区）
-config/       defaults.yml（出厂默认值，不是运行时真值）
-ci/           流水线接线样板（含多语言一份）
-tools/        可选工具规范（只登记不实现）    archives/  归档说明</pre>
-    </div>
-    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx">9 / 9 · 怎么用 / 反馈</span><button onclick="step(1)" disabled>下一页 →</button></div>
-    <p class="foot">设计蓝图 · 分页视图 · 内容与技能包同步（版本见包内 MANIFEST.md）</p>
-  </section>
-
-  </main>
+      <p class="muted">发现的问题按「<b>先记录事实，再决定是否加规则</b>」处理——需要真实案例，不因单个想法就改协议。</p></div>
+      <div class="card"><h2>关于本页</h2>
+      <p class="muted">本页是<b>使用说明页</b>（对外），不是技能内部设计文档；技能本体（协议正文 / 脚本 / 模板）见包内 <code>MANIFEST.md</code> 与 <code>references/</code>。</p>
+      <p class="muted"><b>制作者</b>：如天之星</p>
+      <p class="muted">网页版蓝图（外部托管）：<a href="https://zyzep6f7.qwenwork.host/">https://zyzep6f7.qwenwork.host/</a></p></div>
+    </section>
+    <div class="pager"><button onclick="step(-1)">← 上一页</button><span class="idx"></span><button onclick="step(1)">下一页 →</button></div>
+<p class="foot">工程管理协议 · 使用说明页 · 内容与技能包同步（版本见包内 MANIFEST.md）</p>
+</main>
 </div>
 <script>
-  var ids=["p1","p2","p3","p4","p5","p6","p7","p8","p9"];
-  function go(id){
-    if(ids.indexOf(id)<0)id="p1";
-    ids.forEach(function(x){
-      var el=document.getElementById(x); if(el)el.classList.toggle("on",x===id);
-      var a=document.querySelector('nav a[data-t="'+x+']'); if(a)a.classList.toggle("on",x===id);
-    });
-    window.scrollTo(0,0);
-  }
-  function step(d){
-    var cur=(location.hash||"#p1").slice(1); var i=ids.indexOf(cur); if(i<0)i=0;
-    var n=Math.min(ids.length-1,Math.max(0,i+d)); location.hash="#"+ids[n];
-  }
-  window.addEventListener("hashchange",function(){go((location.hash||"#p1").slice(1))});
-  document.addEventListener("keydown",function(e){
-    if(e.key==="ArrowRight")step(1); if(e.key==="ArrowLeft")step(-1);
-  });
-  go((location.hash||"#p1").slice(1));
+var ids=['p1','p2','p3','p4','p5','p6','p7','p8','p9'],cur=0;
+function show(i){cur=(i+ids.length)%ids.length;ids.forEach(function(x,j){document.getElementById(x).className='page'+(j===cur?' on':'');});
+document.querySelectorAll('nav a').forEach(function(a,j){a.className=(j===cur?'on':'');});
+document.querySelectorAll('.idx').forEach(function(e){e.textContent=(cur+1)+' / '+ids.length;});window.scrollTo(0,0);}
+function step(d){show(cur+d);}
+document.querySelectorAll('nav a').forEach(function(a,j){a.onclick=function(e){e.preventDefault();show(j);};});
+var h=(location.hash||'').slice(1);if(ids.indexOf(h)<0)h='p1';show(ids.indexOf(h));
+document.onkeydown=function(e){if(e.key==='ArrowRight')step(1);if(e.key==='ArrowLeft')step(-1);};
 </script>
 </body>
 </html>

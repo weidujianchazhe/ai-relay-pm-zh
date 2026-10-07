@@ -345,11 +345,11 @@ def list_md(d):
 IS_TEMPLATE = re.compile(r"\.template\.md$", re.I)
 
 def iter_cards(root):
-    """任务卡：tasks\\*.md，排除模板。"""
+    """任务卡：tasks/*.md，排除模板。"""
     return [p for p in list_md(Path(root) / "tasks") if not IS_TEMPLATE.search(p.name)]
 
 def iter_reports(root):
-    """交接记录：reports\\*.md，排除模板。"""
+    """交接记录：reports/*.md，排除模板。"""
     return [p for p in list_md(Path(root) / "reports") if not IS_TEMPLATE.search(p.name)]
 
 def index_rows(path):

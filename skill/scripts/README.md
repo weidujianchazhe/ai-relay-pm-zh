@@ -16,9 +16,12 @@
 ## 即插即用（无需初始化）
 
 - **原样复制即可**，没有"安装/生成/配置脚本"这一步。
-- **不改脚本里的路径**：所有路径来自命令行参数（`<工作区根>` / `<源码根>`）。
+- **不改脚本里的路径**：所有路径来自命令行参数（`<管理区>` / `<源码根>`）。
 - **不改脚本里的阈值**：阈值取自实例 MAP 规则段（缺失才回落 `config/defaults.yml`）——**改配置，不改代码**。
 - **仅依赖 Python 3 标准库**：无第三方、无编译、无网络。
+- **运行包内脚本一律 `python -B`**：顶层解释器 `import _common` 时也会写 `__pycache__`，只有 `-B` 挡得住。
+  包内的编排/自检脚本拉起子进程时**已自带 `-B`**；**手工直接跑**时请自己带上，否则副本会残留 `.pyc`。
+  这不是放宽判定——`gen_views` §15 已不把 `__pycache__` 判为残留，`-B` 只管卫生、不管红灯。
 
 > **成本结构的变化**：门禁由**执行脚本**给出，不再由**读文档判断**给出。
 > 接手者不需要先读完规范才知道什么算合格——**跑一次，看退出码**。
@@ -28,7 +31,7 @@
 | 脚本 | 写盘 | 并发调用 |
 |---|---|---|
 | `overview.py` `validate_workspace.py` `check_closeout.py` `check_index.py` `reconcile.py` `code_metrics.py` | **只读**，不修改任何文件 | **安全**——可多进程、多 AI 同时跑 |
-| `gen_views.py`（不带 `--check`） | 写本包 `README.md` | 安全：先写临时文件再 `os.replace` 原子替换；并发时内容相同、后写者胜 |
+| `gen_views.py`（不带 `--check`） | 写本包 `references/README.md` | 安全：先写临时文件再 `os.replace` 原子替换；并发时内容相同、后写者胜 |
 | `stamp.py` | **默认只读**（打印戳）；`--evidence --append` 会写 `REVIEWS.md`（不可并发） | 安全 |
 | `closeout.py`（各子命令） | **写工作区文件**（卡 / 索引 / 归档 / 留痕） | **不可并发**：同一工作区同一时刻只允许一个写者（单写者原则，见 `references/concurrency.md`） |
 
@@ -75,6 +78,12 @@
 | `check_promises.py` | **文档承诺 ↔ 代码行为对账**——门禁是否真有可达的失败通道 · 「算了不用」的筛选型赋值 | 提交前 / 定期 |
 | `check_index.py` | 索引完整性（编号递增 / 类型合法 / 指针不悬空 / 冷热一致） | 改索引后 / 定期 |
 | `reconcile.py` | 三方一致性（快照 ↔ 记录 ↔ 索引）+ 时间锚 + 容量口径 | 定期 / 怀疑账实不符 |
+| `correctness_rules.py` | **结构模式门禁**：Correctness 域结构模式规则（循环漏收集 / 裸 except / 浮点判等 / 无上限迭代；阻断+观察） | 改代码前后 |
+| `check_size_budget.py` | **入口成本门禁**：SKILL.md 字符数 <= config 的 skill_max_chars（超限 exit=1） | 动 SKILL.md 后 |
+| `provider_gate.py` | **通用 Provider 门禁**（调用成熟工具 + 统一 JSONL 契约；工具未装报待核） | 接多语言/资产门禁时 |
+| `known_defects.py` | **非门禁·报告工具**：已知缺陷集 + 召回矩阵（缺陷 -> 检测器 -> 覆盖/盲区；含语言适配接口） | 新增/收窄规则后 |
+| `capability_matrix.py` | **能力矩阵机检（契约级）**：命令拿得到吗 / 命令指向的东西真的在吗——专治「注册了 ≠ 生效了」；`--selftest` 证明它**能变红** | 改能力层 / 加语言后 |
+| `eng.py` | **能力接口层**：`INSPECT` / `BUILD` / `TEST` / **`AUDIT`** / `VERIFY` 五个动词，按 **Adapter Registry** 分派到各栈工具；**工具缺失 -> 待核 + 指路**（不伪装成功）。见 `references/language-adapters.md` §2 |
 | `code_metrics.py` | 代码度量门禁（三档阈值 / 文件长度 / 注释密度 / 豁免理由真伪 / 依赖方向 / 扫描覆盖）；`--exemptions` 导出**回查清单 + 聚集度** | 每次改代码后 / 每季度豁免回查 |
 | `gen_views.py` | 派生视图生成 + 版本一致性校验 | 改协议后 |
 | `stamp.py` | **机器戳与 AI 标识生成 / 校验**——`--ai-id` 产身份锚；默认产人检 `by=` 戳并报强度档 | 写人检标记时 / 认领任务卡时 / 复核戳时 |
@@ -88,34 +97,34 @@
 ## 用法
 
 ```bash
-python scripts/overview.py           <工作区根> [--full]        # 一屏全貌
-python scripts/validate_workspace.py <工作区根>
-python scripts/check_closeout.py     <工作区根>
-python scripts/check_index.py        <工作区根>
-python scripts/reconcile.py          <工作区根>
-python scripts/code_metrics.py       <源码根> [--ws=<工作区根>] [--lang=python]   # --ws 缺省时按源码根找实例 MAP
+python scripts/overview.py           <管理区> [--full]        # 一屏全貌
+python scripts/validate_workspace.py <管理区>
+python scripts/check_closeout.py     <管理区>
+python scripts/check_index.py        <管理区>
+python scripts/reconcile.py          <管理区>
+python scripts/code_metrics.py       <源码根> [--ws=<管理区>] [--lang=python]   # --ws 缺省时按源码根找实例 MAP
 python scripts/code_metrics.py       <源码根> --exemptions                      # 豁免与预警区清单 + 聚集度（回查用，恒退出 0）
-python scripts/lang_gates.py         <工作区根> record --results "node=0,python=0"  # 多语言门禁留痕（CI 里跑）
-python scripts/lang_gates.py         <工作区根> check                              # 核痕迹新鲜度 / 非零真红
-python scripts/closeout.py           <工作区根> repair                             # 半事务补偿（幂等，可重放）
+python scripts/lang_gates.py         <管理区> record --results "node=0,python=0"  # 多语言门禁留痕（CI 里跑）
+python scripts/lang_gates.py         <管理区> check                              # 核痕迹新鲜度 / 非零真红
+python scripts/closeout.py           <管理区> repair                             # 半事务补偿（幂等，可重放）
 python scripts/gen_views.py          <技能包根> [--check]
 python scripts/stamp.py              <目录> --slot human-review   # 产人检机器戳
 python scripts/stamp.py --ai-id [--slot main-ai]                # 产 AI 标识（身份锚）
-python scripts/new_local.py <工作区根> <脚本名> --purpose "..."  # 生成项目专属脚本骨架
+python scripts/new_local.py <管理区> <脚本名> --purpose "..."  # 生成项目专属脚本骨架
 
 # 提交流程的机械步骤（替代手改共享文件）
-python scripts/closeout.py <工作区根> new-record "<主题>" --ai <标识>
-python scripts/closeout.py <工作区根> index-add --id EN0007 --type [接力] --topic "<主题>" --record "reports\<文件>"
-python scripts/closeout.py <工作区根> archive-reports
-python scripts/closeout.py <工作区根> card-archive <卡文件名>
-python scripts/closeout.py <工作区根> new-card "<任务名>"            # 建任务卡骨架（--design 建的是设计卡）
-python scripts/closeout.py <工作区根> reviews-archive [--dry-run]   # REVIEWS 溢出滚动归档（只增不删）
-python scripts/closeout.py <工作区根> design-archive "<主题>"         # 设计归档（详述+蓝图一起移；触发条件见 references/design.md §4）
+python scripts/closeout.py <管理区> new-record "<主题>" --ai <标识>
+python scripts/closeout.py <管理区> index-add --id EN0007 --type [接力] --topic "<主题>" --record "reports/<文件>"
+python scripts/closeout.py <管理区> archive-reports
+python scripts/closeout.py <管理区> card-archive <卡文件名>
+python scripts/closeout.py <管理区> new-card "<任务名>" --skip-design            # 建任务卡骨架（--design 建的是设计卡）
+python scripts/closeout.py <管理区> reviews-archive [--dry-run]   # REVIEWS 溢出滚动归档（只增不删）
+python scripts/closeout.py <管理区> design-archive "<主题>"         # 设计归档（详述+蓝图一起移；触发条件见 references/design.md §4）
 
 # 定期与首次
-python scripts/audit_all.py <工作区根> [--code <源码根>]   # 全盘核查 + 留痕
-python scripts/setup.py     <工作区根> --plan               # 首次配置询问单
-python scripts/setup.py     <工作区根> --apply --git yes --audit-days 7 --cards yes --commit
+python scripts/audit_all.py <管理区> [--code <源码根>]   # 全盘核查 + 留痕
+python scripts/setup.py     <管理区> --plan               # 首次配置询问单
+python scripts/setup.py     <管理区> --apply --git yes --audit-days 7 --cards yes --commit
 
 # 自检与接线
 python scripts/selftest_gates.py                            # 门禁变异自检（改门禁后必跑）
@@ -134,3 +143,48 @@ python scripts/stamp.py --verify "git:abc1234@2026-09-24T00:11:00+08:00"
 - **工作区文本一律 UTF-8（无 BOM）**。踩过的坑：Windows PowerShell 5.1 的 `Get-Content` 会按
   ANSI 代码页解码 UTF-8，**数出来的行数是错的**（实测同一文件 Python 算 189 行、PS 算 20 行）。
   **要行数/内容，用脚本读，不要用 `Get-Content` 数。**
+
+
+## 修改检查脚本的标准流程 [强制]
+
+任何对 `scripts/` 下检查脚本的修改，一律走同一条事务链：
+
+```
+READ → LOCATE(身份唯一) → DRY-RUN → PREDICT → VALIDATE → CAS → WRITE → READ-BACK → COMPARE
+```
+
+**前置（强制）**：动手前先读本文件（`scripts/README.md`）与 `references/code-quality.md` §0.8。
+
+| 环节 | 要求 | 不能证明时 |
+|---|---|---|
+| READ | 记录目标文件字节级 SHA256 | WRITE = 0 |
+| LOCATE | 目标身份唯一（候选数必须 == 1）| INVALID，WRITE = 0 |
+| DRY-RUN | 默认不写盘 | — |
+| PREDICT | 预测写入后的完整内容 | WRITE = 0 |
+| VALIDATE | 预测内容独立校验（语法/结构/关键契约）| WRITE = 0 |
+| CAS | 写入前重新核对 SHA | WRITE = 0 |
+| WRITE | 仅当以上全部成立 | — |
+| READ-BACK | `预测字节 == 读回字节` | 报失败 |
+| COMPARE | 重算 fingerprint 并记录 | 报失败 |
+
+多文件修改必须 `PREPARE-all → COMMIT-all`：任一 PREPARE 失败 → `COMMIT_COUNT = 0 ∧ WRITE_COUNT = 0`，
+**禁止**出现"部分文件已更新、其余未更新"的半提交状态。
+
+## 执行记录格式（十字段 · 强制）
+
+每次修改都必须留下十字段记录：
+
+```
+1) 变更目标     ：本次要达成什么（一句话）
+2) 实际工作目录 ：执行时的 cwd（绝对路径）
+3) 修改文件     ：逐文件列出（含新增资源）
+4) 生成方式     ：手写 / 生成器 / 事务变换器（含脚本名）
+5) 语法检查     ：py_compile / AST 校验结果
+6) 正向测试     ：通过项与读数
+7) 负向测试     ：故意破坏后必须报错（含期望退出码）
+8) 完整门禁     ：逐门禁退出码与摘要
+9) 产物 SHA256  ：改动文件与资源的新 SHA（字节级）
+10) 未完成事项  ：明确列出未验证/未做的部分（不得省略）
+```
+
+**口径**：未验证的状态必须显式写出（UNKNOWN），不得写成通过；失败必须停在它所属的层并保留现场。

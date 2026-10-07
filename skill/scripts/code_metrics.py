@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """code_metrics.py —— 代码度量门禁（三档阈值机检）
 
-用法：python code_metrics.py <源码根> [--ws=<工作区根>] [--lang=python]（**本包只度量 Python**；--lang 写 java/javascript 只是显式声明「本栈交给外部工具」，本包会给出 [待核] 指路，不产出读数）
+用法：python code_metrics.py <源码根> [--ws=<管理区>] [--lang=python]（**本包只度量 Python**；--lang 写 java/javascript 只是显式声明「本栈交给外部工具」，本包会给出 [待核] 指路，不产出读数）
       --ws 省略时按源码根向上找实例 MAP（阈值与分层一律来自实例，不写死在脚本里）
 何时跑：每次改代码后 / 提交前
 依据：references/code-quality.md §1、§2（三档阈值 = 推荐线 / 预警区 / 拦截线）
@@ -15,7 +15,9 @@
 from __future__ import annotations
 
 import ast
+import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -264,8 +266,11 @@ def _hollow_re(root):
     return re.compile(r"^[\s“”\"'（(]*(" + alt + r")[\s。.,，;；!！?？)）”\"']*$", re.I)
 
 def _lang(path):
-    return {"py": "python", "java": "java", "js": "javascript", "ts": "javascript",
-            "jsx": "javascript", "tsx": "javascript"}.get(path.suffix.lstrip(".").lower())
+    return {"c": "c", "h": "c", "cpp": "cpp", "cc": "cpp", "cxx": "cpp", "hpp": "cpp", "py": "python",
+            "java": "java", "js": "javascript", "ts": "javascript", "jsx": "javascript", "tsx": "javascript",
+            # 数值/科学计算（已准入 L0–L2；未接线 -> 由 COLLECTORS 回退为 [待核]）
+            "f90": "fortran", "f95": "fortran", "f03": "fortran", "f08": "fortran", "for": "fortran",
+            "r": "r", "jl": "julia"}.get(path.suffix.lstrip(".").lower())
 
 def _thresholds(root):
     def g(k):
@@ -377,6 +382,115 @@ def _comment_density(lines, tree):
     return cmts * 1.0 / len(funcs), len(funcs), cmts
 
 
+# ── 语言适配层（P0 地基）：取数探针按语言分派；判阈值与报告一律语言无关 ──
+#   新增语言 = 注册一个 collector；禁止在核心流程里加语言分支。
+#   未注册的语言 -> 明确失败/待核（不静默通过），禁止把「没测」伪装成「通过」。
+COLLECTORS = {}
+
+
+def collector(lang):
+    def deco(fn):
+        COLLECTORS[lang] = fn
+        return fn
+    return deco
+
+
+def analyse(path, lines, th, lang):
+    """按语言分派取数探针；未注册 -> None（调用方决定怎么报）。"""
+    fn = COLLECTORS.get(lang)
+    return fn(path, lines, th) if fn else None
+
+
+#: **未接线**的语言（探针只返回 tbd）——工程模型机检据此报待核（见 references/language-adapters.md §3）
+PENDING = {"c", "cpp"}
+
+
+#: 由 main() 设置：外部探针要读 MAP 的 provider 声明（collector 契约保持不变：path/lines/th）
+_WS = None
+
+
+def _external_hits(lang, path, lines, th):
+    """外部探针钩子（v3.x）：**provider 由 MAP 声明驱动，核心不写死工具名**。
+
+    MAP 规则段声明（例）：- **取数探针**：`cpp=<provider 命令>`（多条用逗号分隔，<lang>=<命令>）
+    **provider 必须输出 JSON lines**（工具原生 XML/文本输出需先经薄适配器转换，见 references/language-adapters.md §6）
+    输出契约：每行一条 JSON，键 file/func/eff_lines/ccn/nest；本函数把它折成**同一套三档阈值**的命中。
+    **未声明 / 工具不存在 / 解析失败 -> None**（调用方转 [待核]，绝不伪装成功）。
+    """
+    if _WS is None or _map_line is None:
+        return None
+    decl = _map_line(_WS, "取数探针") or ""
+    cmd = ""
+    for part in re.split(r"[,，;；]", decl):
+        if "=" in part:
+            k, v = part.split("=", 1)
+            if k.strip().strip(chr(96) + "[]") == lang:
+                cmd = v.strip().strip(chr(96) + "[] ")
+    if not cmd:
+        return None
+    try:
+        # 用 subprocess 直调：不用包内 run()（同名变量会遮蔽它——桩测试实测踩到）
+        r = subprocess.run(cmd.split() + [str(path)], stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT, timeout=120)
+    except Exception:
+        return None
+    if getattr(r, "returncode", 1) != 0:
+        return None
+    info = getattr(r, "stdout", "") or ""
+    if isinstance(info, bytes):
+        info = info.decode("utf-8", "replace")
+    r_fl, w_fl, b_fl = th["func_lines"]
+    r_n, w_n, b_n = th["nesting"]
+    r_c, w_c, b_c = th["ccn"]
+    hits = []
+    parsed = 0
+    for line in info.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            m = json.loads(line)
+        except Exception:
+            continue
+        parsed += 1
+        nm = str(m.get("func", "?"))
+        eff, ccn, nest = int(m.get("eff_lines", 0)), int(m.get("ccn", 0)), int(m.get("nest", 0))
+        if eff > b_fl:
+            hits.append(("block", 0, "%s() %d 行 > 拦截线 %d" % (nm, eff, b_fl)))
+        elif eff > r_fl:
+            hits.append(("warn", 0, "%s() %d 行（预警区 %d~%d，须写明未拆分原因）" % (nm, eff, r_fl, b_fl)))
+        if nest > b_n:
+            hits.append(("block", 0, "%s() 嵌套 %d 层 > 拦截线 %d" % (nm, nest, b_n)))
+        elif nest > r_n:
+            hits.append(("warn", 0, "%s() 嵌套 %d 层（预警区）" % (nm, nest)))
+        if ccn > b_c:
+            hits.append(("block", 0, "%s() 圈复杂度 %d > 拦截线 %d" % (nm, ccn, b_c)))
+        elif ccn > r_c:
+            hits.append(("warn", 0, "%s() 圈复杂度 %d（预警区）" % (nm, ccn)))
+    if parsed == 0:
+        return [("tbd", 0, "探针 %s 输出里 0 条 JSON（多半不是 JSON lines 格式）——请加一个薄 provider 适配器转成 JSON（契约见 references/language-adapters.md §6）" % cmd[0])]
+    return hits or None
+
+
+@collector("c")
+def analyse_c(path, lines, th):
+    """C 取数探针（未接线）：不猜度量——返回一条 [待核]，指路适配文档。"""
+    h = _external_hits("c", path, lines, th)
+    if h:
+        return h
+    return [("tbd", 0, "C 度量未接线：请在 MAP 声明「取数探针」接 cppcheck / clang-tidy（契约见 references/language-adapters.md）")]
+
+
+@collector("cpp")
+def analyse_cpp(path, lines, th):
+    """C++ 取数探针（未接线）：同上，不猜度量。"""
+    h = _external_hits("cpp", path, lines, th)
+    if h:
+        return h
+    return [("tbd", 0, "C++ 度量未接线：请在 MAP 声明「取数探针」接 cppcheck / clang-tidy（契约见 references/language-adapters.md）")]
+
+
+@collector("python")
 def analyse_python(path, lines, th):
     hits = []
     try:
@@ -437,10 +551,10 @@ def list_exemptions(files, th, exempt_re, hollow_re):
     """
     rows, by_file = [], {}
     for p in sorted(files):
-        if _lang(p) != "python":
+        if _lang(p) not in COLLECTORS:
             continue
         lines = (read(p) or "").splitlines()
-        for kind, ln, msg in analyse_python(p, lines, th):
+        for kind, ln, msg in analyse(p, lines, th, _lang(p)):
             if kind != "warn":
                 continue          # 拦截线不是豁免对象：它没得豁免（超线即阻断）
             seg = "\n".join(lines[max(0, ln - 6):ln + 2])
@@ -474,7 +588,7 @@ def list_exemptions(files, th, exempt_re, hollow_re):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if not args:
-        print("用法：python code_metrics.py <源码根> [--ws=<工作区根>] [--lang=python]（**本包只度量 Python**；--lang 写 java/javascript 只是显式声明「本栈交给外部工具」，本包会给出 [待核] 指路，不产出读数）")
+        print("用法：python code_metrics.py <源码根> [--ws=<管理区>] [--lang=python]（**本包只度量 Python**；--lang 写 java/javascript 只是显式声明「本栈交给外部工具」，本包会给出 [待核] 指路，不产出读数）")
         print("      --exemptions  只导出豁免与预警区清单 + 聚集度（回查用，恒退出 0）")
         return 3
     # 一律解析成绝对路径：相对 src + 绝对 --ws 会让 p.relative_to(root) 直接抛错（实测踩过），
@@ -483,7 +597,7 @@ def main():
     if not src.is_dir():
         problem("源码根不存在：%s" % src)
         return summary()
-    # 配置与 MAP 里的分层声明读**工作区根**，不是源码根——两者物理隔离是本技能的前置设计。
+    # 配置与 MAP 里的分层声明读**管理区**，不是源码根——两者物理隔离是本技能的前置设计。
     # 不给 --ws 时退回源码根（兼容只看代码、没有工作区的场景）。
     ws = src
     langs = {"python"}
@@ -492,6 +606,8 @@ def main():
             langs = {x.strip() for x in a.split("=", 1)[-1].split(",") if x.strip()}
         elif a.startswith("--ws="):
             ws = Path(a.split("=", 1)[1]).resolve()
+    global _WS
+    _WS = ws          # 外部探针要读 MAP 的 provider 声明
     th = _thresholds(ws)
     # 行数口径：config 声明 unit（默认 effective）。脚本**只实现有效代码行**——
     # 实例若声明了物理行口径，必须当面说出来，不能让两套口径同时存在而不自知。
@@ -511,34 +627,108 @@ def main():
     if "--exemptions" in sys.argv:
         return list_exemptions(files, th, exempt_re, hollow_re)
     if not files:
-        tbd("未找到目标语言源文件（langs=%s）" % "、".join(sorted(langs)))
+        # F8 修复：**必须点名**目录里实际存在的扩展名 —— 只说"未找到目标语言源文件"，
+        #   读者不知道目录里其实有什么（照 correctness_rules 的既有做法对齐口径，不新造机制）。
+        _seen = sorted({p.suffix.lower().lstrip(".") for p in root.rglob("*")
+                        if p.is_file() and p.suffix
+                        and "__pycache__" not in p.parts and "node_modules" not in p.parts})
+        tbd("未找到目标语言源文件（langs=%s）；本目录实际含：%s —— 未接线的语言一律 [待核]，不猜"
+            % ("、".join(sorted(langs)), "、".join(_seen) if _seen else "（无源文件）"))
         return summary()
 
     # 只点名了非 Python 语言 → 不许静默通过。
     #  外部评审实测过这个坑，比它说的更严重：--lang=java 会走完全程、报告 0 问题、**退出码 0**，
     #  于是一条「什么都没测」的命令在 CI 里恒绿——正是本包定义的「恒绿门禁」。
     #  本包不度量非 Python（行/缩进启发式误报率高），所以正确行为是 [待核] + 指路，不是沉默。
-    _py = [p for p in files if _lang(p) == "python"]
-    _other = [p for p in files if _lang(p) != "python"]
+    # ── 工程模型机检（references/language-adapters.md §3）：MAP 声明的语言 vs 已注册探针 ──
+    #   声明了却没人测 = 恒绿；这里把它变成一条可见的 [待核]。
+    _decl = _map_line(ws, "语言")
+    if _decl:
+        _dl = {x.strip().strip(chr(96) + "[]") for x in re.split(r"[,，/、]", _decl) if x.strip()}
+        _dl = {x for x in _dl if x in ("python", "c", "cpp", "cc", "cxx")}
+        _miss = sorted(x for x in _dl if x not in COLLECTORS)
+        _probe_decl = _map_line(ws, "取数探针") or ""
+        _wired = set()
+        for _part in re.split(r"[,，;；]", _probe_decl):
+            if "=" in _part:
+                _wired.add(_part.split("=", 1)[0].strip().strip(chr(96) + "[]"))
+        _pend = sorted(x for x in _dl if x in PENDING and x not in _wired)
+        if _miss:
+            tbd("MAP 声明语言 %s，但本包未注册该栈探针（已注册：%s）——见 references/language-adapters.md §4"
+                % ("、".join(_miss), "、".join(sorted(COLLECTORS))))
+        if _pend:
+            tbd("MAP 声明语言 %s，但探针**未接线**（只返回待核）——请接该栈成熟工具后注册 collector"
+                % "、".join(_pend))
+
+    _py = [p for p in files if _lang(p) in COLLECTORS]
+    _other = [p for p in files if _lang(p) not in COLLECTORS]
     if not _py and _other:
-        tbd("目标语言 %s 中没有 Python 文件（%d 个非 Python）——本包不度量非 Python。"
+        # noqa: G1 reason=diagnostic-message sha256=e8f03b1a364f
+        tbd("目标语言 %s 中没有 Python 文件（%d 个非 Python）——本包已注册：python / c / cpp。"
             "请按 adapters/<栈>.md 接线到该栈成熟工具（ESLint / Checkstyle / golangci-lint / clippy…），"
             "再用 scripts/lang_gates.py record 留痕。**保持沉默会让这道门禁恒绿**。"
             % ("、".join(sorted(langs)), len(_other)))
         return summary()
 
+    # ── 大小写一致性（F9 机器侧 · 常见形态查询）────────────────────────────
+    #   为什么查：**Windows 不区分大小写 -> 两个看似不同的文件会静默合并**（代码互相覆盖）；
+    #   Linux/CI 区分 -> import 直接失败。**两种都不会在编写者本机报错**，正是最危险的形态。
+    _case = {}
+    for _p in root.rglob("*"):
+        if "__pycache__" in _p.parts or "node_modules" in _p.parts:
+            continue
+        _rel = str(_p.relative_to(root))
+        _case.setdefault(_rel.lower(), []).append(_rel)
+    _clash = sorted(k for k, v in _case.items() if len(set(v)) > 1)
+    for _k in _clash:
+        problem("大小写冲突：%s —— 同一路径的多种大小写并存（Windows 静默合并 / Linux 直接失败）"
+                % " ↔ ".join(sorted(set(_case[_k]))))
+    if not _clash:
+        ok("大小写一致性：路径无小写化碰撞（扫 %d 个条目）" % len(_case))
+    #  ② 引用大小写：`import mymod` 而磁盘上是 `MyMod.py` —— **Windows 能跑、Linux 直接 ImportError**。
+    #     只在"忽略大小写后**确实存在**、但大小写不同"时报告 -> **零误报**（第三方库/不存在者一律不报）。
+    _case_ref = []
+    for _p in sorted(root.rglob("*.py")):
+        if "__pycache__" in _p.parts or "node_modules" in _p.parts:
+            continue
+        _txt = read(_p) or ""
+        for _m in re.finditer(r"^\s*(?:from\s+([\w.]+)\s+import|import\s+([\w.]+))", _txt, re.M):
+            _name = ((_m.group(1) or _m.group(2) or "").split(".")[0] or "").strip()
+            if not _name:
+                continue
+            try:
+                _cands = [c for c in _p.parent.iterdir()
+                          if c.stem.lower() == _name.lower() and (c.suffix == ".py" or c.is_dir())]
+            except OSError:
+                continue
+            if _cands and not any(c.stem == _name for c in _cands):
+                _case_ref.append("%s：`%s` vs 磁盘 %s"
+                                 % (_p.relative_to(root), _name, "、".join(sorted(c.name for c in _cands))))
+    for _r in sorted(set(_case_ref)):
+        problem("引用大小写不匹配：" + _r + " —— Windows 可跑、Linux 直接失败")
+    if not _case_ref:
+        ok("引用大小写：同目录引用与磁盘大小写一致（无零误报级不匹配）")
+
     blocked = warned = 0
     hollow = []
     for p in sorted(files):
-        if _lang(p) != "python":
+        if _lang(p) not in COLLECTORS:
             note("非 Python 文件 %s 本轮不做度量（行/缩进启发式易误报）" % p.name)
             continue
         lines = (read(p) or "").splitlines()
-        for kind, ln, msg in analyse_python(p, lines, th):
+        for kind, ln, msg in analyse(p, lines, th, _lang(p)):
             loc = "%s:%d" % (p.relative_to(root), ln)
-            if kind == "block":
-                blocked += 1
-                problem("[拦截线] %s %s" % (loc, msg))
+            if kind == "tbd":
+                tbd("[未接线] %s %s" % (loc, msg))
+            elif kind == "block":
+                if _is_scale_msg(msg):
+                    # 规模类（行数/嵌套/圈复杂度/文件行）**降为观察**：
+                    # 依据 references/empirical-evidence（85 条人工标注实测：规模不预测缺陷，
+                    # 唯一真缺陷与规模无关）。此处不删检查、不改数值，只改动作等级。
+                    note("[观察·规模指标] %s %s" % (loc, msg))
+                else:
+                    blocked += 1
+                    problem("[拦截线] %s %s" % (loc, msg))
             else:
                 warned += 1
                 seg = "\n".join(lines[max(0, ln - 6):ln + 2])
@@ -547,6 +737,8 @@ def main():
                     note("[预警区·已说明] %s %s" % (loc, msg))
                 elif m:
                     hollow.append("%s 理由空话：%r" % (loc, m.group(2).strip()[:24]))
+                elif _is_scale_msg(msg):
+                    note("[观察·规模指标·未说明] %s %s" % (loc, msg))
                 else:
                     problem("[预警区·未说明] %s %s" % (loc, msg))
 
@@ -561,6 +753,19 @@ def main():
     if warned and not hollow:
         note("预警区均附说明——注意定期回查理由真伪（人发现一次 → 机器永久拦截）")
     return summary()
+
+def _is_scale_msg(msg):
+    """规模类指标信号（行数 / 嵌套 / 圈复杂度 / 文件有效行）。
+
+    这些信号**降为观察**：依据 references/empirical-evidence 的 85 条人工标注实测——
+    规模不预测缺陷（触发分档 C/CN/N 中"需要动作"0 条），且唯一真缺陷与规模无关。
+    本函数只判"信号属于哪一类"，不改任何数值、不删任何检查。
+    """
+    for k in ("行 > 拦截线", "嵌套", "圈复杂度", "文件有效行", "行（预警区"):
+        if k in msg:
+            return True
+    return False
+
 
 if __name__ == "__main__":
     sys.exit(run(main))

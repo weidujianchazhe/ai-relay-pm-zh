@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """reconcile.py —— 三方一致性校验（快照 ↔ 记录 ↔ 索引）
 
-用法：python reconcile.py <工作区根>
+用法：python reconcile.py <管理区>
 何时跑：定期 / 怀疑账实不符时
 依据：references/audit.md §3.3
 
@@ -22,7 +22,7 @@ from _common import (  # noqa: E402
 
 def main():
     if len(sys.argv) < 2:
-        print("用法：python reconcile.py <工作区根>")
+        print("用法：python reconcile.py <管理区>")
         return 3
     root = Path(sys.argv[1])
 

@@ -9,7 +9,7 @@
 
 三个杀点（都是真实时点，不是模拟）：
   C1 写完临时文件、尚未原子替换   → 目标应保持**旧内容**；残留 tmp + 锁；重跑收敛；sweep 可清
-  C2 刚取到锁、还没写任何东西     → 锁残留；短超时写者**明确失败**；锁龄超限后可抢占
+  C2 刚取到锁、还没写任何东西     → 锁残留；短超时写者**明确失败**；**崩溃（进程死亡）后立即可接管**
   C3 已原子替换、尚未释放锁       → **内容已更新**（不丢），锁残留；重跑正常
   C4 半个事务（冷区已写、热区没有）→ 重跑**拒绝重复**（幂等），冷区不重复 —— **需人工对齐，不是自动收敛**
 
@@ -146,7 +146,7 @@ def c4_half_transaction():
     (root / "reports" / "2026-09-20_x.md").write_text("# x\n", encoding="utf-8")
     co = str(HERE / "closeout.py")
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-    args = [sys.executable, co, str(root), "index-add", "--id", "EN0007", "--type", "[接力]",
+    args = [sys.executable, "-B", co, str(root), "index-add", "--id", "EN0007", "--type", "[接力]",
             "--topic", "半事务测试", "--record", "reports/2026-09-20_x.md", "--ai", "win-a"]
     r1 = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, timeout=120)
     cold_with_row = sum(1 for l in (root / "archives" / "INDEX_archived.md").read_text(encoding="utf-8").splitlines() if "EN0007" in l)
@@ -175,14 +175,14 @@ def c5_repair_converges():
     (root / "reports" / "2026-09-20_x.md").write_text("# x\n", encoding="utf-8")
     co = str(HERE / "closeout.py")
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-    args = [sys.executable, co, str(root), "index-add", "--id", "EN0007", "--type", "[接力]",
+    args = [sys.executable, "-B", co, str(root), "index-add", "--id", "EN0007", "--type", "[接力]",
             "--topic", "半事务", "--record", "reports/2026-09-20_x.md", "--ai", "win-a"]
     subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, timeout=120)
     t = (root / "INDEX.md").read_text(encoding="utf-8")
     (root / "INDEX.md").write_text("\n".join(l for l in t.splitlines() if "EN0007" not in l) + "\n",
                                     encoding="utf-8")
     before_hot = "EN0007" in (root / "INDEX.md").read_text(encoding="utf-8")
-    r1 = subprocess.run([sys.executable, co, str(root), "repair"],
+    r1 = subprocess.run([sys.executable, "-B", co, str(root), "repair"],
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, timeout=120)
     hot = (root / "INDEX.md").read_text(encoding="utf-8")
     cold = (root / "archives" / "INDEX_archived.md").read_text(encoding="utf-8")
@@ -190,7 +190,7 @@ def c5_repair_converges():
     #  用 `r2.stdout.decode("gbk")` 再找「无需修复」——在 UTF-8 环境里解码即乱码，断言必挂；
     #  更糟的是：那是把「文案」当契约，改一个字就红。**契约是状态，不是输出。**
     #  正确判据：第二次 repair 后**冷热两区一行的增减都没有**，且退出码正常。
-    r2 = subprocess.run([sys.executable, co, str(root), "repair"],
+    r2 = subprocess.run([sys.executable, "-B", co, str(root), "repair"],
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, timeout=120)
     hot2 = (root / "INDEX.md").read_text(encoding="utf-8")
     cold2 = (root / "archives" / "INDEX_archived.md").read_text(encoding="utf-8")

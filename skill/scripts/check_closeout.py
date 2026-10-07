@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """check_closeout.py —— 提交流程门禁（closeout gate）
 
-用法：python check_closeout.py <工作区根>
+用法：python check_closeout.py <管理区>
 何时跑：每次提交前（**失败即阻塞提交**）
 依据：references/workflow.md §4、references/artifacts.md §4
 
@@ -25,11 +25,11 @@ BLOCKS = ["本次需求", "本次涉及工程信息", "改动点", "验证结果
 
 def main():
     if len(sys.argv) < 2:
-        print("用法：python check_closeout.py <工作区根>")
+        print("用法：python check_closeout.py <管理区>")
         return 3
     root = Path(sys.argv[1])
     if not root.is_dir():          #  #13：根不存在必须**明确报错**，不能落进"新工作区正常"
-        problem("工作区根不存在：%s" % root)
+        problem("管理区不存在：%s" % root)
         return 3
 
     print("== 1. 最新记录 6+1 块齐全 ==")

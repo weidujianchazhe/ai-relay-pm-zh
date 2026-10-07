@@ -1,0 +1,6 @@
+def f(xs):
+    out = []
+    for x in xs:
+        if x is None:
+            continue
+    return "".join(out)

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>设计蓝图 · {{TOPIC}}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"PingFang SC","Microsoft YaHei",Segoe UI,Arial,sans-serif;background:#F4F3EE;color:#1A1B1C;line-height:1.7;padding:24px}
+.wrap{max-width:980px;margin:0 auto}
+.hd{background:linear-gradient(135deg,rgba(163,213,232,.35),rgba(158,172,234,.25));border-radius:14px;padding:20px 24px;margin-bottom:16px}
+.hd h1{font-size:21px}.meta{font-size:12.5px;color:#4B5563;margin-top:6px}
+.card{background:#FFF;border:1px solid #E4E3DD;border-radius:12px;padding:16px 20px;margin-bottom:14px}
+h2{font-size:15.5px;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;margin:6px 0}
+th,td{border:1px solid #E4E3DD;padding:6px 9px;font-size:12.5px;text-align:left;vertical-align:top}
+th{background:#F1F0EB}
+pre{background:#F7F6F2;border:1px solid #E4E3DD;border-radius:8px;padding:10px 12px;font-size:12.5px;overflow-x:auto}
+ul{margin:4px 0 4px 18px}li{font-size:12.5px}
+.todo{color:#8A5200}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="hd">
+<h1>设计蓝图 · {{TOPIC}}</h1>
+<div class="meta">DESIGN-ID：{{DSN_ID}} ｜ 状态：草案 ｜ 日期：{{DATE}} ｜ 配套详述：同目录 <code>{{TOPIC}}.md</code></div>
+<div class="meta"><strong>本文是人读的结构视图</strong>：只放小标题 / 表格 / 清单 / 框图；<strong>不放长段落</strong>（单段上限见 <code>capacity.blueprint_max_para_chars</code>），总行数上限见 <code>capacity.blueprint_max_lines</code>（<strong>超限仅提醒</strong>）。</div>
+</div>
+<div class="card"><h2>一、现状 → 目标</h2><table><tr><th>现状</th><th>目标</th></tr><tr><td>（填写）</td><td>（填写）</td></tr></table></div>
+<div class="card"><h2>二、结构与依赖</h2><pre>（模块 / 依赖图；本设计**处于项目整体结构的哪个位置**）</pre></div>
+<div class="card"><h2>三、改动点清单</h2><table><tr><th>落点</th><th>改什么</th><th>为什么</th></tr><tr><td>（文件/模块）</td><td>（填写）</td><td>（填写）</td></tr></table></div>
+<div class="card"><h2>四、数据与调用流</h2><pre>（主路径；调用顺序）</pre></div>
+<div class="card"><h2>五、拆分出的执行任务</h2><ul><li class="todo">TASK-…（定稿后回填；任务卡为<strong>可选</strong>载体）</li></ul></div>
+<div class="card"><h2>六、风险与未决</h2><ul><li class="todo">（未决项 / 风险 / 需要先验证的点）</li></ul></div>
+<div class="card"><h2>七、实施依据（本质门 · 两问）</h2><ul>
+<li>① 这项工作在<strong>项目整体结构中的位置</strong>：</li>
+<li>② 实施时<strong>依据什么结构</strong>（落点 / 影响面 / 顺序与依赖 / 可独立与不可独立）：</li>
+</ul></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# 卡
+
+- **编号**：EN0002
+- **状态**：[进行中]
+- **承接**：win-t
+- **进度锚点**：—
+- **上次交接**：reports\2026-09-20_一_win-t.md
+- **已提炼**：—
+- **代码根路径**：—
+- **涉及**：—
+- **并发元数据**：owner=win-t；lease=—；claimed_at=—；expires_at=—；revision=0；NORMALIZED-SHA256=—；写入方式=atomic rename；冲突文件=—

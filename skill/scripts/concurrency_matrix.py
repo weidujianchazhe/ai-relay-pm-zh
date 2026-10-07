@@ -136,8 +136,9 @@ def t_fencing_states():
             "旧=%s（应拒）· 超大=%s（应拒）· 不带=%s（opt-in 放行）· 令牌 %d→%d" % (old_ok, future_ok, no_tok_ok, t1, t2))
 
 
-def t_stale_lock():
-    """I5 崩溃残留锁：残留的锁**文件**不阻塞（本实现已无锁龄概念——锁在 fd 上，不在文件存不存在）。"""
+def t_lockfile_no_owner():
+    """I5 残留锁文件不阻塞：锁文件**存在**不等于有人持有——ownership 在 **fd 的 OS 建议锁**上，
+    不在「文件存不存在」（本实现已无锁龄 / 抢占概念）。"""
     root = _fresh()
     p = root / "REVIEWS.md"
     lp = lease._lock_path(p)
@@ -193,11 +194,11 @@ def t_archive_locked():
     env = dict(os.environ, WSX_LOCK_TIMEOUT="1",
                PYTHONDONTWRITEBYTECODE="1")
     co = str(Path(__file__).resolve().parent / "closeout.py")
-    r1 = subprocess.run([sys.executable, co, str(root), "card-archive", "EN0001_x.md", "--ai", "win-a"],
+    r1 = subprocess.run([sys.executable, "-B", co, str(root), "card-archive", "EN0001_x.md", "--ai", "win-a"],
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, timeout=120)
     moved_when_locked = not card.exists()
     lease.release_lock(holder)
-    r2 = subprocess.run([sys.executable, co, str(root), "card-archive", "EN0001_x.md", "--ai", "win-a"],
+    r2 = subprocess.run([sys.executable, "-B", co, str(root), "card-archive", "EN0001_x.md", "--ai", "win-a"],
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, timeout=120)
     moved_after = (root / "archives" / "done" / "EN0001_x.md").exists()
     good = (r1.returncode != 0) and (not moved_when_locked) and (r2.returncode == 0) and moved_after
@@ -304,6 +305,27 @@ def t_handoff_invariant():
             "B 持有时 C 被拒=%s · inode 未漂移=%s（%s→%s）· 锁文件存在=%s"
             % (exclusive, same_inode, ino0, ino1, persists))
 
+
+def t_sweep_active_tmp():
+    """I12 临时文件生命周期：`sweep_temp` **不删活跃写者的 tmp**（新的不删、旧的才删），且**绝不删锁文件**。"""
+    root = _fresh()
+    fresh = root / "REVIEWS.md.tmp.999.aaa"
+    fresh.write_text("正在写\n", encoding="utf-8")          # 活跃写者的 tmp：刚创建，mtime 新
+    stale = root / "REVIEWS.md.tmp.888.bbb"
+    stale.write_text("崩溃残留\n", encoding="utf-8")
+    old = time.time() - 3600
+    os.utime(stale, (old, old))                            # 伪造成 1 小时前的崩溃残留
+    lk = root / "REVIEWS.md.lock"
+    lk.write_text("epoch=1 token=x\n", encoding="utf-8")
+    os.utime(lk, (old, old))                               # 锁文件再旧也**绝不删**（防 path→inode 漂移）
+    n, _names = lease.sweep_temp(root)
+    ok_fresh, ok_stale, ok_lock = fresh.exists(), not stale.exists(), lk.exists()
+    good = ok_fresh and ok_stale and ok_lock
+    shutil.rmtree(root, ignore_errors=True)
+    return ("I12", "sweep 不碰活跃 tmp / 不删锁文件", "强保证", good,
+            "活跃 tmp 保留=%s · 旧残留清除=%s · 锁文件保留=%s（共清理 %d）"
+            % (ok_fresh, ok_stale, ok_lock, n))
+
 def main():
     ap = argparse.ArgumentParser(description="并发不变量矩阵（故障注入）")
     usage_exit(ap)
@@ -311,9 +333,10 @@ def main():
     args = ap.parse_args()
     n = 4 if args.quick else 6
     rows = [t_cas_race(n), t_append_race(n if not args.quick else 4),
-            t_claim_race(), t_fencing_states(), t_stale_lock(),
+            t_claim_race(), t_fencing_states(), t_lockfile_no_owner(),
             t_lock_timeout(), t_bypass_detect(), t_archive_locked(),
-            t_pause_no_takeover(), t_release_ownership(), t_handoff_invariant()]
+            t_pause_no_takeover(), t_release_ownership(), t_handoff_invariant(),
+            t_sweep_active_tmp()]
     print("== 并发不变量矩阵（%s）==" % ("quick" if args.quick else "完整"))
     print("%-4s %-34s %-10s %-6s %s" % ("编号", "不变量", "保证等级", "结果", "说明"))
     print("-" * 118)

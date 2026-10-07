@@ -157,7 +157,10 @@ def _set_owner_line(txt: str, ai: str) -> str:
 
 #: 锁参数（可用环境变量覆盖，便于测试与调参）
 # ── 并发原语已拆到 locks.py（层界分离）──────────────────────
-#  这里只做**再导出**，让既有调用点平滑过渡；新代码请用 locks.exclusive_resource()。
+#  这里只做**再导出**（迁移兼容层）：**禁止新业务扩大低层锁 API 面**。
+#  实测（v2.2.0）：业务层直接调用 acquire_lock/release_lock/_lock_path/Lock = **0**；
+#  全部调用点都在测试装置（concurrency/crash 矩阵）与文本扫描器（check_promises）里。
+#  新代码只用 locks.exclusive_resource()。
 from locks import (  # noqa: E402,F401
     LOCK_TIMEOUT, Lock, _lock_path,
     acquire_lock, exclusive_resource, release_lock, verify_lock,
@@ -377,8 +380,9 @@ def sweep_temp(root: Path, older_than=None):
     removed = []
     #  **绝不删锁文件**（防 path→inode 漂移）：删掉一个「看起来没人持有」的锁文件，
     #  就是给 path→inode 漂移开门——别人随后新建同名文件并加锁，会出现两个互斥对象。
-    #  只清：崩溃留下的半成品临时文件 + rename 抢占留下的 *.lock.stale.* 尸体。
-    for pat in ("*.tmp.*", "*.tmp", "*.lock.stale.*"):
+    #  只清：崩溃留下的半成品临时文件（*.tmp*）。改名/接管路径已整体删除，
+    #  故不再存在 *.lock.stale.* 一类尸体——清理模式与现存机制**一一对应**，不留历史残留。
+    for pat in ("*.tmp.*", "*.tmp"):
         for f in _glob.glob(str(Path(root) / "**" / pat), recursive=True):
             p = Path(f)
             try:

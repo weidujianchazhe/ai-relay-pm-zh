@@ -1,5 +1,7 @@
 # 落地附录 · Java
 
+> **状态：未实现（仅说明）** —— 本文件是适配说明，不是已实现能力；语言准入判据与晋升门槛见 references/language-adapters.md 12 与 references/language-quality-adaptation-plan.md。
+
 > ⚠️ **本文件不属技能正文**，是 `references/code-quality.md` 的**按栈落地附录**——只回答「在 Java 栈上用什么工具、配什么参数、接线在哪」。
 > 正文条款以 `references/code-quality.md` 为准（下文一律简称「正文」）；文中 `{{config:...}}` 为占位符，落地时由 `config/defaults.yml` 的实值替换。
 
@@ -65,3 +67,24 @@
 
 - **空捕获白名单**：`EmptyCatchBlock` 允许异常变量名为 `expected|ignore`——与 JS 侧 `no-unused-vars.caughtErrorsIgnorePattern` 是同源约定，跨栈保持一致。
 - **异常与日志**：禁 `printStackTrace`，必须使用日志框架；核心业务层严格捕获并区分异常类型，顶层入口统一兜底并转友好提示，安全模块（认证/加密）逐行审查。
+
+
+## 附 0. 外部先验（权威来源，接入时须核对版本）
+
+**Java**：Google Java Style Guide · SpotBugs 官方 Bug Patterns 文档 · PMD 规则集 · Checkstyle · OWASP Dependency-Check 与 find-sec-bugs · Effective Java（条目）
+
+> 纪律（与 references/quality-baseline-design.md 一致）：
+> ① 这些规范不是普适权威（大厂的风格指南是对其自身生态的约定）；
+> ② 工具默认值不是我们的标准 —— 我们只借它们回答什么值得测，阈值仍由真实样本校准。
+
+## 附 5. 已知缺陷集（取自标准，不含自采样）
+
+> 不自己造缺陷样本；直接用权威标准的编号与规则名当已知缺陷集。
+- SpotBugs：NP_NULL_ON_SOME_PATH（空路径解引用）· RV_RETURN_VALUE_IGNORED · DLS_DEAD_LOCAL_STORE · OBL_UNSATISFIED_OBLIGATION（资源未关闭）
+- PMD：EmptyCatchBlock · CloseResource · AvoidCatchingGenericException
+- find-sec-bugs：SQL 注入 · 路径遍历 · 不安全反序列化
+- CWE-476 · CWE-252 · CWE-404 · CWE-89
+- Q6 证据：JUnit5 + JaCoCo fail-under · OWASP Dependency-Check（CVE）
+
+> 用法：按 Provider 机制接入工具后，用这些条目验证工具是否真能抓到；
+> 抓不到的登记为盲区，不假装覆盖。

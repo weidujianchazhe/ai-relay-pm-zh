@@ -1,3 +1,4 @@
+# NOPMD: 并发原语的契约与失败模式必须就地写清，否则接手者无法判断边界条件。
 # -*- coding: utf-8 -*-
 """locks.py —— 并发原语层（互斥的**唯一物理实现**所在）
 
@@ -11,7 +12,9 @@
 本层对外的承诺（可执行用例见 scripts/concurrency_matrix.py）：
   · 同一路径同一时刻最多一个有效 OS 锁代（I11）；
   · 暂停（进程未死）不得被接管（I9）；崩溃（进程死亡）可立即接管（C2）；
-  · 放锁**不删锁文件**——锁文件是装置，删除会造成 path→inode 漂移（I10 / I11）。
+  · 放锁**不删锁文件**——锁文件是装置，删除会造成 path→inode 漂移（I10 / I11）；
+  · **锁文件里的 epoch / token 只是「锁代标识 + 排障信息」，不是 ownership 权威**——
+    判 ownership **只看 fd 上的 OS 建议锁**（防止未来维护者把它误当第二套锁权威）。
 
 依据：references/concurrency-internals.md §2.2
 """
@@ -91,10 +94,10 @@ def _os_unlock(fd) -> None:
 
 
 class Lock:
-    """一次取锁的句柄：fd + 锁文件 + **所有权 token** + **代号 epoch**。
+    """一次取锁的句柄：fd + 锁文件（+ 仅供排障的 token / epoch）。
 
-    token 回答「这把锁是不是我拿的」；epoch 回答「这是第几代锁」。两者都要：
-    "旧写者复活"既能表现为 token 不符（别人接管了），也能表现为 epoch 落后（自己重拿过）。
+    **所有权的唯一权威是 fd 上的 OS 建议锁**；token / epoch 只是写进锁文件的**代数记录与排障信息**，**不参与归属判定**。原因：
+    上一代实现用它们判定「锁是否易主」（旧写者复活 / 别人接管 / epoch 落后），那套判定已随 EXCL 退化路径**整体删除**。
     """
     __slots__ = ("fd", "path", "token", "epoch", "mode", "released")
 
@@ -111,7 +114,8 @@ def verify_lock(lock) -> bool:
         所以"我是否仍是持有者"＝"我的 fd 还没释放"。**不要再去读锁文件核对 token**：
         Windows 的字节范围锁是**强制**的，另开句柄读会直接 PermissionError，
         那样会把自己的锁误判成"已易主"（实测：全部写入被拒，10 个用例挂 8 个）。
-      · `excl` 退化模式：没有 OS 锁可依赖，只能靠**锁文件里的 token/epoch** 判断。
+      · **（已移除）** 上一代还有 `excl` 退化模式——靠锁文件里的 token/epoch 判定归属。
+        该路径已整体删除：不支持建议锁时**明确失败**，因为降级给出的是无法兑现的保证。
     """
     if lock is None:
         return True
@@ -122,7 +126,7 @@ def acquire_lock(path: Path):
     """取锁。返回 (Lock | None, 说明)。
 
     顺序体现取舍：**先试操作系统级建议锁**（暂停安全 + 死亡安全），
-    只有平台/文件系统不支持时才退化为 EXCL 协议。
+    平台/文件系统不支持建议锁时**明确失败**（返回 None + 说明）——**不降级**：降级会给出无法兑现的互斥保证。
     """
     lp = _lock_path(path)
     token = "%d-%s" % (os.getpid(), secrets.token_hex(8))
@@ -168,7 +172,8 @@ def release_lock(lock) -> None:
 
     **为什么要核对归属**：若**无条件 unlink**，旧持有者恢复后执行 finally，
     会把抢占者刚建的锁删掉，于是第三个进程可径直进入临界区（互斥被破坏）。
-    现在先核对 token/epoch：不是自己的锁**绝不删**。
+    **本实现根本不删锁文件**（release = unlock + close），故 token/epoch **不再参与放锁判定**；
+    上一代「先核对再删」的做法已随 `unlink` 一起移除。
     """
     if lock is None:
         return

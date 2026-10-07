@@ -1,3 +1,4 @@
+# NOPMD: 用例的变异意图与判据必须就地写明——用例名看不出它证明的是哪个故障形态，删掉注释即失去可复核性。
 # -*- coding: utf-8 -*-
 """selftest_gates.py —— 门禁的变异自检（证明门禁真的会红）
 
@@ -38,17 +39,9 @@ from _common import run, usage_exit  # noqa: E402  —— 统一入口包装（�
 HERE = Path(__file__).resolve().parent
 
 INDEX_HEAD = "# 夹具 · 记录索引（INDEX）\n\n| 编号 | 日期 | 类型 | 主题 | AI | 交接文件 |\n|---|---|---|---|---|---|\n"
-MAP_TXT = ("# 夹具 · 项目地图（MAP）\n\n## 一、环境\n\n- 平台：win\n\n## 二、规则\n\n"
-           "- INDEX 主文件行数：20\n- STATE 字数上限：15k\n- reports 归档阈值：20\n"
-           "- 定期排查：关\n- 协作模式：light\n")
-RECORD = ("# 夹具记录\n\n> 交接 #001\n\n## 本次需求\n\n- x\n\n## 本次涉及工程信息\n\n- x\n\n"
-          "## 改动点\n\n- x\n\n## 验证结果\n\n- x\n\n## 数据影响\n\n- 本轮无设计级取舍、未核设计文档\n\n"
-          "## 下一步\n\n- 无\n\n## 任务卡更新\n\n- 已更新\n")
-CARD = ("# 卡\n\n- **编号**：EN0002\n- **状态**：[进行中]\n- **承接**：win-t\n"
-        "- **进度锚点**：—\n- **上次交接**：reports\\2026-09-20_一_win-t.md\n"
-        "- **已提炼**：—\n- **代码根路径**：—\n- **涉及**：—\n"
-        "- **并发元数据**：owner=win-t；lease=—；claimed_at=—；expires_at=—；revision=0；"
-        "NORMALIZED-SHA256=—；写入方式=atomic rename；冲突文件=—\n")
+MAP_TXT = ((Path(__file__).resolve().parent / "templates" / "selftest_map_text.txt").read_text(encoding="utf-8"))
+RECORD = ((Path(__file__).resolve().parent / "templates" / "selftest_record_text.txt").read_text(encoding="utf-8"))
+CARD = ((Path(__file__).resolve().parent / "templates" / "selftest_card_text.txt").read_text(encoding="utf-8"))
 
 
 def build_fixture(root: Path):
@@ -76,6 +69,15 @@ def build_fixture(root: Path):
     (root / "src" / "mod.py").write_text("def f():\n    return 1\n", encoding="utf-8")
     for p in HERE.glob("*.py"):
         shutil.copy2(p, root / "scripts" / p.name)
+        _rd = HERE / "README.md"
+        if _rd.is_file():
+            shutil.copy2(_rd, root / "scripts" / "README.md")
+            _td = HERE / "templates"
+            if _td.is_dir():
+                shutil.copytree(_td, root / "scripts" / "templates", dirs_exist_ok=True)
+                _fd = HERE / "fixtures"
+                if _fd.is_dir():
+                    shutil.copytree(_fd, root / "scripts" / "fixtures", dirs_exist_ok=True)
 
 
 def _mut_del(path):
@@ -90,7 +92,7 @@ def _mut_edit(path, old, new):
 def _mk_spec_only(d):
     """只写详述、不写蓝图 —— 一份设计＝两件套，缺一份必须报红。"""
     (d / "designs" / "方案.md").write_text(
-        "# 方案 设计卡\n\n- **状态**：草案\n- **拆分出的执行卡**：—\n", encoding="utf-8")
+        "# 方案 设计卡\n\n- **状态**：草案\n- **拆分出的任务卡**：—\n", encoding="utf-8")
 
 
 def _mk_long_blueprint(d):
@@ -105,6 +107,18 @@ def _mk_long_blueprint(d):
 def _mk_long_file(d):
     """单文件有效行超拦截线（600）——文件级三档必须和函数级一样会红。"""
     (d / "src" / "mod.py").write_text("".join("x%d = %d\n" % (i, i) for i in range(620)), encoding="utf-8")
+
+
+def _mk_index_incomplete(d):
+    """夹具里的 scripts/README.md 只列 1 个脚本 —— §3 必须报「一览表缺登记」。
+
+    为什么用这种写法：§3 查的是【包自身】的文件集合，无法靠改工作区夹具触发；
+    因此由变异函数【就地写一份不完整的一览表】，再让 check_promises 用 --scripts-dir 指向夹具，
+    这样既保持夹具隔离，又让 §3 进入自动回归。
+    """
+    (d / "scripts" / "README.md").write_text(
+        "| 脚本 | 作用 | 何时跑 |\n|---|---|---|\n| `overview.py` | 一屏全貌 | 随时 |\n",
+        encoding="utf-8")
 
 
 def _mk_comment_heavy(d):
@@ -124,7 +138,9 @@ def _mk_others_lease(d):
 
 
 def _run(script, *args):
-    p = subprocess.run([sys.executable, str(HERE / script), *args],
+    #  -B：自检跑的是包内脚本，不得在包里留下 .pyc（口径见 scripts/README.md；
+    #      这不是"用有利环境替包打掩护"——gen_views §15 早已不把 __pycache__ 判为残留）
+    p = subprocess.run([sys.executable, "-B", str(HERE / script), *args],
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                        timeout=180, check=False)
     return p.returncode, p.stdout.decode("utf-8", "replace")
@@ -168,13 +184,36 @@ def cases():
          _mk_spec_only),
         ("validate_workspace", "蓝图里塞长段落（详述被搬进蓝图）", "validate_workspace.py", ["{r}"],
          _mk_long_blueprint),
-        ("code_metrics", "注入超拦截线的长文件（620 有效行）", "code_metrics.py", ["{r}/src", "--ws={r}"],
-         _mk_long_file),
+        # 【2026-10-02】规模类（长文件 / 长函数 / 嵌套 / CCN）已降为「观察」不再阻断，
+        # 故不再作为"必须变红"的变异用例。此处改为验证**仍然阻断**的非规模类信号：
+        # 注释密度超限 · 预警区未说明 · 豁免理由空话。
         ("code_metrics", "注入注释密度超限（3.0 条/函数）", "code_metrics.py", ["{r}/src", "--ws={r}"],
          _mk_comment_heavy),
-        ("code_metrics", "注入超拦截线的长函数（120 行）", "code_metrics.py", ["{r}/src", "--ws={r}"],
+        # §3（scripts/*.py 与一览表集合一致）：夹具隔离的变异 —— 见 _mk_index_incomplete 的说明
+        ("check_promises", "一览表缺登记（夹具 README 少列脚本）", "check_promises.py",
+         ["{r}", "--scripts-dir={r}/scripts"], _mk_index_incomplete),
+        # 结构模式规则（Correctness 域）：注入 feedparser 那条真缺陷的形态
+        # （循环前建空容器、循环体只 continue、循环后直接使用）——必须变红。
+        ("correctness_rules", "注入循环漏收集（真缺陷形态）", "correctness_rules.py", ["{r}/src"],
          lambda d: (d / "src" / "mod.py").write_text(
-             "def big():\n" + "".join("    x%d = %d\n" % (i, i) for i in range(120)) + "    return 0\n",
+             (Path(__file__).resolve().parent / "fixtures" / "selftest_fixture_src.txt").read_text(encoding="utf-8"),
+             encoding="utf-8")),
+        # 说明：规模类（长文件/长函数/嵌套/CCN）自 2026-10-02 起为「观察」不阻断，
+        # 且其"豁免理由空话"检查一并跳过（观察项无需豁免）——故不再设"必须变红"用例。
+        # code_metrics 仍能阻断的类别：注释密度超限未说明（上一用例）· 扫描覆盖不足 · 依赖方向。
+        # 数学/数值域规则（M1/M4）：注入必须变红
+        ("correctness_rules", "注入浮点判等（与 0.1 比较）", "correctness_rules.py", ["{r}/src"],
+         lambda d: (d / "src" / "mod.py").write_text(
+             "def f(x):\n"
+             "    if x == 0.1:\n"
+             "        return 1\n"
+             "    return 0\n",
+             encoding="utf-8")),
+        ("correctness_rules", "注入 while True 无 break", "correctness_rules.py", ["{r}/src"],
+         lambda d: (d / "src" / "mod.py").write_text(
+             "def f(tol):\n"
+             "    while True:\n"
+             "        tol = tol / 2\n",
              encoding="utf-8")),
     ]
 
@@ -213,9 +252,15 @@ def main() -> int:
             build_fixture(fx)
             mutate(fx)
             rc, _ = _run(script, *[x.replace("{r}", str(fx)) for x in extra])
+            #  判据收紧：**只认门禁抓到问题**（1 阻断 / 2 仅待核）。
+            #  rc=3 是脚本/用法错误——把脚本跑崩了不等于门禁有效，不能拿来当自证。
             if rc == 0:
                 fails.append("%s / %s：注入故障后**仍然退出 0** —— 门禁对这类故障是瞎的" % (gate, desc))
                 print("  [未变红]   %-18s %s" % (gate, desc))
+            elif rc == 3:
+                fails.append("%s / %s：注入故障后退出 **3（脚本/用法错误）**——这是把脚本跑崩了，"
+                             "不是门禁抓到问题，不算自证" % (gate, desc))
+                print("  [退出3]    %-18s %s（崩溃不算自证）" % (gate, desc))
             else:
                 print("  [已变红]   %-18s %s（exit=%d）" % (gate, desc, rc))
         except Exception as e:

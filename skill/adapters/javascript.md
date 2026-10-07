@@ -1,5 +1,7 @@
 # 落地附录 · JavaScript / TypeScript
 
+> **状态：未实现（仅说明）** —— 本文件是适配说明，不是已实现能力；语言准入判据与晋升门槛见 references/language-adapters.md 12 与 references/language-quality-adaptation-plan.md。
+
 > ⚠️ **本文件不属技能正文**，是 `references/code-quality.md` 的**按栈落地附录**——只回答「在 JS/TS 栈上用什么工具、配什么参数、接线在哪」。
 > 正文条款以 `references/code-quality.md` 为准（下文一律简称「正文」）；文中 `{{config:...}}` 为占位符，落地时由 `config/defaults.yml` 的实值替换。
 
@@ -66,3 +68,24 @@
 - **有一处待核对项**：`no-finally` **不是 ESLint 核心规则**（核心对应规则是 `no-unsafe-finally`，只禁止在 `finally` 中改变控制流），照抄会报「Definition for rule 'no-finally' was not found」——**接入前须替换为 `no-unsafe-finally`**。
 - **空捕获**：`no-empty` 配 `allowEmptyCatch: false`，配合 `no-unused-vars` 的 `caughtErrorsIgnorePattern` 白名单（`expected|ignore`）——与 Java `EmptyCatchBlock` 同源。
 - **禁止裸打印调试**：`no-console` 仅告警且放行 `warn`/`error`，工具侧已留出日志通道；生产路径的打印仍按正文判定。
+
+
+## 附 0. 外部先验（权威来源，接入时须核对版本）
+
+**JavaScript**：eslint:recommended + eslint-plugin-security · Google JavaScript Style Guide · Airbnb JS Style Guide · OWASP Node.js Security Cheat Sheet · Node.js 官方最佳实践 · MDN
+
+> 纪律（与 references/quality-baseline-design.md 一致）：
+> ① 这些规范不是普适权威（大厂的风格指南是对其自身生态的约定）；
+> ② 工具默认值不是我们的标准 —— 我们只借它们回答什么值得测，阈值仍由真实样本校准。
+
+## 附 5. 已知缺陷集（取自标准，不含自采样）
+
+> 不自己造缺陷样本；直接用权威标准的编号与规则名当已知缺陷集。
+- ESLint 核心：no-undef · no-unused-vars · eqeqeq · no-fallthrough
+- eslint-plugin-security：detect-eval · detect-child-process · detect-non-literal-fs-filename · detect-object-injection
+- CWE-79 XSS · CWE-78 命令注入 · CWE-95 eval · CWE-1321 原型污染
+- 依赖风险：npm audit · OSV-Scanner
+- Q6 证据：Jest / Vitest + c8 覆盖率 fail-under · 性能用 clinic / 0x 取样
+
+> 用法：按 Provider 机制接入工具后，用这些条目验证工具是否真能抓到；
+> 抓不到的登记为盲区，不假装覆盖。

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """overview.py —— 一屏项目全貌（只读视图，不是门禁）
 
-用法：python overview.py <工作区根> [--full]
+用法：python overview.py <管理区> [--full]
 
 为什么要有这个脚本：
     「这个项目现在是什么状态」原本要靠人依次打开 MAP / STATE / INDEX / tasks 四处才能回答。
@@ -166,9 +166,7 @@ def show_card_board(root, cards):
     if not cards:
         # 没有卡时不能说"正常"，要说**怎么建**：任务卡由人开口、AI 落卡，
         # 用户不知道有这个功能，卡就永远是 0（说明话术见 references/onboarding.md §6）。
-        print("     暂无任务卡。建卡不用记命令，对 AI 说一句即可："
-              "「新建任务：<要做的事>」——AI 跑 closeout.py new-card 生成骨架；"
-              "要先定方案时先说「这件事先出个设计卡」（未批准的设计不生成执行卡）。")
+        print((Path(__file__).resolve().parent / "templates" / "overview_no_cards_hint.txt").read_text(encoding="utf-8"))
         return
     groups = {}
     info = {}
@@ -342,7 +340,7 @@ def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     full = "--full" in sys.argv
     if not args:
-        print("用法：python overview.py <工作区根> [--full]")
+        print("用法：python overview.py <管理区> [--full]")
         return 0
     root = Path(args[0])
     if not root.is_dir():

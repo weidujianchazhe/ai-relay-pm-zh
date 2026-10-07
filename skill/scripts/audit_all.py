@@ -2,7 +2,7 @@
 """audit_all.py —— 全盘核查入口（编排器 + 留痕）
 
 用法：
-    python audit_all.py <工作区根> [--code <源码根>] [--only a,b,c] [--no-record]
+    python audit_all.py <管理区> [--code <源码根>] [--only a,b,c] [--no-record]
 
 为什么要有这个脚本：
     ① 门禁分多路（结构 / 提交 / 索引 / 一致性 / 代码度量），逐个手跑既费事又容易只跑一半就宣布通过——
@@ -40,7 +40,9 @@ import lease as _lease  # noqa: E402  —— 共享文件写原语（CAS）
 HERE = Path(__file__).resolve().parent
 #: 全盘核查的成员（顺序即运行顺序；overview 是视图不是门禁，恒 0）
 MEMBERS = ["overview.py", "validate_workspace.py", "check_closeout.py",
-           "check_index.py", "reconcile.py"]
+           "check_index.py", "reconcile.py",
+           # 2026-10-02 纳入：此前只在 CI 跑，本地全盘核查跑不到（CI 与本地必须一致）
+           "correctness_rules.py", "check_size_budget.py", "provider_gate.py"]
 EVIDENCE_RE = re.compile(r"^-\s*(\d{4}-\d{2}-\d{2}T[\d:+\-]+)\s*·\s*全盘核查")
 
 
@@ -87,7 +89,7 @@ def main() -> int:
 
     root = Path(a.root)
     if not root.is_dir():
-        problem("工作区根不存在：%s" % root)
+        problem("管理区不存在：%s" % root)
         return 3
 
     print("=" * 52)
@@ -129,7 +131,8 @@ def main() -> int:
             problem("成员脚本不存在：%s" % m)
             worst = max(worst, 1)
             continue
-        args = [sys.executable, str(script), str(root if m != "code_metrics.py" else a.code)]
+        # -B：编排跑全部门禁时不落地 .pyc（口径见 scripts/README.md；非掩盖红灯，见 references/self-gate-debt.md）
+        args = [sys.executable, "-B", str(script), str(root if m != "code_metrics.py" else a.code)]
         print()
         print("---- %s " % m + "-" * max(0, 46 - len(m)))
         try:

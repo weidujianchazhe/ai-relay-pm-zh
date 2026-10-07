@@ -1,3 +1,4 @@
+# NOPMD: 本文件是门禁规则的唯一实现处，每条检查必须就地写明判据与反例；注释是规格的一部分，不是复述代码。
 # -*- coding: utf-8 -*-
 """gen_views.py —— 派生视图生成 + 版本一致性校验
 
@@ -12,15 +13,17 @@
     本脚本把派生视图从人工抄写改为生成，并校验版本一致性。
 
 派生视图（不得手改）：
-    · 本包 README.md 的「协议速览」区段（由 SKILL.md 的「核心不变量」节生成）
+    · 本包 references/README.md 的「协议速览」区段（由 SKILL.md 的「核心不变量」节生成）
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import _load_defaults as _defaults, run  # noqa: E402
 from _common import note, ok, problem, read, summary, tbd  # noqa: E402
@@ -48,7 +51,7 @@ def skill_invariants(pkg: Path):
 def _atomic_write(path: Path, text: str):
     """原子写：先写同目录临时文件，再 os.replace 覆盖。
 
-    为什么要原子：本套脚本里**只有本脚本会写盘**，而它写的是 README.md——
+    为什么要原子：本套脚本里**只有本脚本会写盘**，而它写的是 references/README.md——
     非原子写在中途崩溃或与另一个进程并发时，会留下被截断的 README。
     os.replace 在同一文件系统上是原子的：读到的要么是旧全文，要么是新全文。
     并发两个 gen_views 也安全：两边内容相同，后写者胜，结果一致。
@@ -125,7 +128,7 @@ def main():
     if not items:
         tbd("未能从 SKILL.md 抽取核心不变量节（派生视图跳过）")
         return summary()
-    readme = pkg / "README.md"
+    readme = pkg / "references" / "README.md"
     txt = read(readme) or ""
     block = render_section(items)
     if BEGIN in txt and END in txt:
@@ -168,7 +171,7 @@ def main():
         for h in sorted(have):
             if h not in fields and h not in ("文件名",):
                 drift.append("%s模板多出字段「%s」（closeout.py 骨架里没有）" % (label, h))
-    bpt = pkg / "templates" / "designs" / "DESIGN_BLUEPRINT.template.md"
+    bpt = pkg / "templates" / "designs" / "DESIGN_BLUEPRINT.template.html"
     bt = read(bpt)
     if bt is None:
         drift.append("设计蓝图模板不可读：%s" % bpt.relative_to(pkg))
@@ -472,6 +475,9 @@ def main():
         for i, line in enumerate((read(p) or "").splitlines(), 1):
             if rel == "references/glossary.md" and i in gloss_skip:
                 continue
+            #  正当引用豁免：该行是在**解释**旧名（含 旧称/旧名/曾用/原叫），不算回潮
+            if any(_q in line for _q in ("旧称", "旧名", "曾用", "原叫")):
+                continue
             for w in terms:
                 if w in line and w not in exempt_here:
                     offenders.append("%s:%d 出现旧名「%s」" % (rel, i, w))
@@ -484,6 +490,42 @@ def main():
         ok("对照表登记 %d 个旧名，扫描 %d 个文件 0 回潮（%d 个现役/契约词已登记豁免）"
            % (len(pairs), scanned, len(TERM_LIVE)))
 
+    #  ── 第二条规则：**当前/历史语义分区**（旧机制术语只允许出现在带历史标注的行里）──
+    import ast
+    _LEAK = ("LOCK_STALE", "锁龄抢占", "lock-age", "EXCL fallback", "stale takeover", "rename 抢占", "epoch 继承")
+    _LABEL = ("已移除", "旧模型", "HISTORICAL", "历史", "原实现", "上一代", "当年")
+    _zones = []
+    for _p in ("references/concurrency-internals.md", "references/concurrency.md"):
+        _hist = False
+        for _i, _l in enumerate((read(pkg / _p) or "").splitlines(), 1):
+            if _l.startswith("#"):
+                _hist = "HISTORICAL" in _l          # 小节标题含 HISTORICAL → 整节视为历史区
+            if any(_k in _l for _k in _LEAK):
+                _zones.append((_p, _i, _l, _hist or any(_t in _l for _t in _LABEL)))
+    _cur = [z for z in _zones if not z[3]]
+    _his = [z for z in _zones if z[3]]
+    _code = []
+    _src = read(pkg / "scripts" / "locks.py") or ""
+    _tree = ast.parse(_src)
+    _skip = set()
+    for _node in ast.walk(_tree):
+        if isinstance(_node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            _d = ast.get_docstring(_node, clean=False)
+            if _d:
+                for _ln in range(_node.body[0].lineno, (_node.body[0].end_lineno or _node.body[0].lineno) + 1):
+                    _skip.add(_ln)
+    for _i, _l in enumerate(_src.splitlines(), 1):
+        if _i in _skip or _l.strip().startswith("#"):
+            continue
+        if any(_k in _l for _k in _LEAK):
+            _code.append((_i, _l.strip()[:60]))
+    if _cur or _code:
+        for _p, _i, _l, _f in _cur[:6]:
+            problem("当前/历史语义泄漏：%s:%d 出现旧机制术语但未标注历史：%s" % (_p, _i, _l.strip()[:56]))
+        for _i, _l in _code[:4]:
+            problem("旧机制术语出现在可执行代码里：locks.py:%d %s" % (_i, _l))
+    else:
+        ok("当前/历史语义分区：Current 区命中 0 · Historical 标注 %d 处 · 代码行为引用 0" % len(_his))
     print("== 14. 可发现性（references/ 每个文件都必须能从首读入口找到） ==")
     #  为什么查：§11 只查「被引用的文件是否存在」，抓不到「存在但无人引用」——
     #  删/改路由时，正文会**静默从入口不可达**（恢复篇、审计篇尤其致命），而门禁全绿。
@@ -496,7 +538,99 @@ def main():
     else:
         ok("references/ 的 %d 个文件都能从 SKILL.md 找到" % len(_refs))
 
-    return summary()
+    print("== 15. 发布卫生（未登记根条目 · 缓存/测试残留） ==")
+    if not (pkg / "MANIFEST.md").is_file():
+        note("非完整包（缺 MANIFEST.md）——跳过发布卫生检查")
+    else:
+        allow = {'blueprint', 'tools', 'LEGACY_ONBOARDING.md', 'config', 'adapters', 'locales', 'BLUEPRINT.md', 'examples', 'scripts', 'ci', 'archives', 'MANIFEST.md', 'templates', 'SKILL.md', 'references'}
+        junk = []
+        for p in sorted(pkg.iterdir()):
+            if p.name not in allow:
+                junk.append("根目录未登记：%s" % p.name)
+        for d in pkg.rglob("*"):
+            rel = str(d.relative_to(pkg))
+            if d.is_dir() and d.name in (".pytest_cache", ".mypy_cache", ".ruff_cache", "__pycache__"):
+                junk.append("缓存目录：%s" % rel)
+            elif d.is_file() and d.suffix == ".lock":
+                junk.append("残留文件：%s" % rel)
+        for d in pkg.iterdir():
+            if d.is_dir() and (d.name.startswith("matrix_") or d.name.startswith("crash_") or d.name.startswith("gate_selftest_")):
+                junk.append("测试残留目录：%s" % d.name)
+        if junk:
+            for j in sorted(set(junk)):
+                problem("发布卫生：" + j)
+        else:
+            ok("根目录无未登记条目 · 无缓存/测试残留（根条目 %d 个）" % len(list(pkg.iterdir())))
+
+    print("== 16. 配置面 ASCII 与全角空格（F9：机器字段必须可被工具读） ==")
+    #   为什么查：机器用的字段混入全角（尤其**全角空格**）会让命令/键**静默失配**——不报错、只出错。
+    #   口径刻意收窄到**零误报**：只查 ① providers 的机器字段 ② yml 的**键** ③ **全角空格**（任何地方都错）。
+    _fw = chr(0x3000)          # 全角空格：连中文文案里也不该出现
+    _bad_fw = []
+    _cfg = pkg / "config"
+    if _cfg.is_dir():
+        for _jf in sorted(_cfg.glob("*.json")):
+            try:
+                _jd = json.loads(_jf.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            for _p in (_jd.get("providers", []) if isinstance(_jd, dict) else []):
+                for _k in ("key", "kind", "tool", "probe", "run", "standards", "defects"):
+                    _v = _p.get(_k)
+                    if _v is None:
+                        continue
+                    _s = json.dumps(_v, ensure_ascii=False)
+                    if _fw in _s or any(ch in "，。；：（）【】「」" for ch in _s):
+                        _bad_fw.append("%s: providers[%s].%s 含全角字符" % (_jf.name, _p.get("key", "?"), _k))
+        for _yf in sorted(_cfg.glob("*.yml")):
+            for _i, _l in enumerate((read(_yf) or "").splitlines(), 1):
+                _s = _l.split("#", 1)[0]
+                _m = re.match(r"^\s*([^:\s]+):", _s)
+                if _m and (_fw in _m.group(1) or any(ch in "，。；：（）【】「」" for ch in _m.group(1))):
+                    _bad_fw.append("%s:%d 键含全角字符：%s" % (_yf.name, _i, _m.group(1)))
+    for _sub in ("scripts", "references", "config", "adapters"):
+        _sd = pkg / _sub
+        if not _sd.is_dir():
+            continue
+        for _f2 in _sd.rglob("*"):
+            if not _f2.is_file() or "__pycache__" in _f2.parts or _f2.suffix.lower() not in (".py", ".yml", ".json", ".md"):
+                continue
+            if _fw in (read(_f2) or ""):
+                _bad_fw.append("%s 含全角空格（U+3000）" % _f2.relative_to(pkg))
+    if _bad_fw:
+        for _b in sorted(set(_bad_fw)):
+            problem("配置面 ASCII：" + _b)
+    else:
+        ok("配置面 ASCII：机器字段与键无全角字符 · 无全角空格（扫 %s）" % "scripts/references/config/adapters")
+
+    print("== 17. 载体契约一致性（规范 → 模板 → 生成器 → 验证器） ==")
+    #   为什么查：四层换轨时**任一层留在旧载体**都会静默漂移（门禁全绿、事实上没接通）。
+    #   唯一真值＝**规范声明**（design.md）：其余三层只许与它一致，不得各说各话。
+    _spec = read(pkg / "references" / "design.md") or ""
+    _mm = re.search(r"blueprint\.([A-Za-z0-9]+)`.{0,40}?（\*\*人看", _spec) or re.search(r"blueprint\.([A-Za-z0-9]+)`", _spec)
+    _want = _mm.group(1) if _mm else None
+    if not _want:
+        note("载体契约：规范未声明蓝图扩展名，跳过（无法判定，不猜）")
+    else:
+        _bad = []
+        _dir = pkg / "templates" / "designs"
+        if not any(t.suffix == ("." + _want) for t in _dir.glob("DESIGN_BLUEPRINT.template.*")):
+            _bad.append("模板层：templates/designs/DESIGN_BLUEPRINT.template.%s 缺失" % _want)
+        _co = read(pkg / "scripts" / "closeout.py") or ""
+        _exts = set(re.findall(r"blueprint\.([A-Za-z0-9]+)", _co))
+        _wrong = sorted(e for e in _exts if e != _want)
+        if _wrong:
+            _bad.append("生成器层：closeout.py 仍出现旧载体 .blueprint.%s" % "、".join(_wrong))
+        elif _want not in _exts:
+            _bad.append("生成器层：closeout.py 未产出 .blueprint.%s" % _want)
+        _gv = read(pkg / "scripts" / "gen_views.py") or ""
+        if ("DESIGN_BLUEPRINT.template.%s" % _want) not in _gv:
+            _bad.append("验证器层：gen_views.py 未按 .%s 模板核对" % _want)
+        for _b in _bad:
+            problem("载体契约不一致（规范＝.%s）：%s" % (_want, _b))
+        if not _bad:
+            ok("载体契约一致：规范 .%s ＝ 模板 ＝ 生成器 ＝ 验证器" % _want)
+
     return summary()
 
 if __name__ == "__main__":

@@ -2,16 +2,16 @@
 """closeout.py —— 提交流程的机械步骤（把"手改共享文件"换成"跑脚本"）
 
 用法：
-    python closeout.py <工作区根> new-record "<主题>" [--ai <标识>]
-    python closeout.py <工作区根> index-add --id <编号> --type <类型> --topic <主题> --record <路径> [--ai <标识>] [--date YYYY-MM-DD]
-    python closeout.py <工作区根> archive-reports
-    python closeout.py <工作区根> card-archive <卡文件名>
-    python closeout.py <工作区根> new-card "<卡名>" [--design] [--project P] [--module M] [--design-id DSN-...]
-    python closeout.py <工作区根> reviews-archive [--keep N] [--dry-run]
-    python closeout.py <工作区根> design-archive "<设计主题>" [--dry-run]
-    python closeout.py <工作区根> claim   "<卡名>" --ai <标识> [--minutes N] [--steal "<理由>"]
-    python closeout.py <工作区根> release "<卡名>" --ai <标识> [--force]
-    python closeout.py <工作区根> repair [--dry-run]   # 半事务补偿（可重放、幂等）
+    python closeout.py <管理区> new-record "<主题>" [--ai <标识>]
+    python closeout.py <管理区> index-add --id <编号> --type <类型> --topic <主题> --record <路径> [--ai <标识>] [--date YYYY-MM-DD]
+    python closeout.py <管理区> archive-reports
+    python closeout.py <管理区> card-archive <卡文件名>
+    python closeout.py <管理区> new-card "<卡名>" [--design] [--project P] [--module M] [--design-id DSN-... | --skip-design]
+    python closeout.py <管理区> reviews-archive [--keep N] [--dry-run]
+    python closeout.py <管理区> design-archive "<设计卡名>" [--dry-run]
+    python closeout.py <管理区> claim   "<卡名>" --ai <标识> [--minutes N] [--steal "<理由>"]
+    python closeout.py <管理区> release "<卡名>" --ai <标识> [--force]
+    python closeout.py <管理区> repair [--dry-run]   # 半事务补偿（可重放、幂等）
 
 为什么要有这个脚本：
     提交流程里有一半是**机械动作**——索引镜像写、溢出移行、滚动归档、交接号自增、记录骨架。
@@ -337,39 +337,7 @@ def cmd_new_record(root: Path, a) -> int:
     if card is not None:
         src.append("任务卡 tasks/%s" % card.name)
     src.append("git" if git_ready else "无版本控制")
-    body = """# %s
-
-> 交接 #%03d
-> 机械字段由 closeout.py new-record 预填（来源：%s）；**标 [待填] 的必须由人补齐**——预填不等于查证。
-
-## 本次需求
-
-- %s
-
-## 本次涉及工程信息
-
-- %s
-
-## 改动点
-
-%s
-
-## 验证结果
-
-- %s
-
-## 数据影响
-
-- %s
-
-## 下一步
-
-- %s
-
-## 任务卡更新
-
-- %s
-""" % (title, no, " + ".join(src), need, files, chg, TBD,
+    body = (Path(__file__).resolve().parent / "templates" / "closeout_record.md").read_text(encoding="utf-8") % (title, no, " + ".join(src), need, files, chg, TBD,
        "%s（若本轮无设计级取舍，改写为「本轮无设计级取舍、未核设计文档」）" % TBD,
        nxt, "更新 tasks/%s 的要点与锚点，并同步 STATE" % (card.name if card else "（对应卡）"))
     _atomic_write(dest, body)
@@ -378,7 +346,7 @@ def cmd_new_record(root: Path, a) -> int:
     note("机械字段预填 %d/3（需求 / 涉及 / 下一步）；**语义字段（验证结果 / 数据影响）留 [待填]**——"
          "它们要判断，自动填就是编" % filled)
     note("提交门禁会拦住仍含 [待填] 的记录：check_closeout.py 视为未提交完成")
-    note("登记索引：python closeout.py <工作区根> index-add --id <编号> --type [接力] --topic \"%s\" --record reports\\%s" % (title, name))
+    note("登记索引：python closeout.py <管理区> index-add --id <编号> --type [接力] --topic \"%s\" --record reports\\%s" % (title, name))
     return summary()
 
 
@@ -465,8 +433,8 @@ def cmd_card_archive(root: Path, a) -> int:
 CARD_FIELDS = ["TASK-ID", "DESIGN-ID", "EVENT-ID", "状态", "描述", "要点", "代码根路径",
                "涉及", "承接", "进度锚点", "上次交接", "已提炼", "设计偏离", "派发摘录",
                "验收状态", "并发元数据"]
-DESIGN_FIELDS = ["DESIGN-ID", "状态", "提议人", "批准人", "批准 EVENT-ID", "影响模式",
-                 "范围与不变式", "角色/权限变化", "迁移与回滚", "验证证据", "拆分出的执行卡"]
+DESIGN_FIELDS = ["DESIGN-ID", "状态", "提议人", "定稿人", "定稿 EVENT-ID", "影响模式",
+                 "范围与不变式", "角色/权限变化", "迁移与回滚", "验证证据", "拆分出的任务卡"]
 
 
 def _serial() -> str:
@@ -520,24 +488,27 @@ def _render_design_card(topic: str, mode: str, day: str, ds_id: str = "") -> str
         "- **DESIGN-ID**：%s" % (ds_id or ("DSN-%s-%s" % (day.replace("-", ""), _serial()))),
         "- **状态**：草案",
         "- **提议人**：[`scripts/stamp.py --ai-id` 产出的标识]",
-        "- **批准人**：—",
-        "- **批准 EVENT-ID**：—",
+        "- **定稿人**：—",
+        "- **定稿 EVENT-ID**：—",
         "- **影响模式**：%s" % mode,
         "- **范围与不变式**：[目标 / 非目标 / 必须保持的协议约束]",
         "- **角色/权限变化**：[新增 owner、审计或裁决责任；无则「—」]",
         "- **迁移与回滚**：[文件集、兼容策略、失败处理]",
         "- **验证证据**：[检查 / fixture / 命令及结果]",
-        "- **拆分出的执行卡**：—",
+        "- **拆分出的任务卡**：—",
         "",
-        "> **配套蓝图**：同目录 `<主题>.blueprint.md` 必须存在（结构视图，给人看）。",
-        "> **归档**：全部拆完或作废后跑 `closeout.py <工作区根> design-archive <主题>`，两份文件一起移入 `designs\\archives\\`。",
+        "> **配套蓝图**：同目录 `<主题>.blueprint.html` 必须存在（结构视图，给人看）。",
+        "> **归档**：全部拆完或作废后跑 `closeout.py <管理区> design-archive <主题>`，两份文件一起移入 `designs\\archives\\`。",
         "",
         "## 生命周期门禁",
         "",
         "1. 草案 → 评审中：补齐范围、权限、迁移与验证证据。",
-        "2. 评审中 → 已批准/已拒绝：管理者写批准或拒绝 EVENT-ID；**未批准不得生成执行卡**。",
-        "3. 已批准 → 执行卡：每张执行卡填写本 DESIGN-ID，并生成新的 TASK-ID。",
-        "4. 已批准 → 已废弃：管理者写废弃 EVENT-ID；已生成的执行卡不回写历史，只按新决策处理。",
+        "2. 评审中 → 已定稿/已拒绝：管理者写定稿或拒绝 EVENT-ID；**未定稿不得生成任务卡**。",
+        "3. 已定稿 → 任务卡：每张任务卡填写本 DESIGN-ID，并生成新的 TASK-ID。",
+        "3b. **已定稿 → 暂不实施·基线保留**：设计**有效但不立即实施**（未来规划 / 架构基线 / 设计库存）——**合法状态**，不产生任务、不归档。",
+        "3c. **设计变更传播**：设计变更（v1→v2 / 废弃）必须登记「受影响结构」与「受影响任务」并写 EVENT-ID——不得只改 Markdown。",
+        "3d. **任务完成 ≠ 设计失效**：任务全部完成不使设计失效；它可能仍是当前工程基线，继续作为对照依据。",
+        "4. 已定稿 → 已废弃：管理者写废弃 EVENT-ID；已生成的任务卡不回写历史，只按新决策处理。",
     ]
     return "\n".join(L) + "\n"
 
@@ -549,56 +520,41 @@ BLUEPRINT_SECTIONS = ["现状 → 目标", "结构与依赖", "改动点清单",
 
 
 def _render_blueprint(topic: str, mode: str, day: str, ds_id: str) -> str:
-    L = [
-        "# %s · 设计蓝图" % topic,
-        "",
-        "> **这是给人看的一屏结构视图，不是权威源。** 叙述（理由 / 边界 / 验收细节）在 `%s.md`。" % topic,
-        "> **每轮修订直接重写本文件**（它短）；详述只做定点修改——规则见 `references/design.md` §2。",
-        "> **格式约束**：小标题 / 表格 / 清单 / 代码块框图；**不放长段落**（上限 `{{config:capacity.blueprint_max_para_chars}}` 字符），总行数 ≤ `{{config:capacity.blueprint_max_lines}}`。",
-        "",
-        "**设计标识**：%s · **状态**：草案 · **影响模式**：%s" % (ds_id, mode),
-        "**一句话**：[这份设计要解决什么，一行]",
-        "",
-        "---",
-        "",
-        "## 一、现状 → 目标（改什么）",
-        "",
-        "```",
-        "现状                          目标",
-        "┌──────────────┐            ┌──────────────┐",
-        "│ <现在的样子>  │   ──▶      │ <改完的样子>  │",
-        "└──────────────┘            └──────────────┘",
-        "```",
-        "",
-        "## 二、结构与依赖",
-        "",
-        "```",
-        "<分层 / 模块 / 依赖方向；有环或例外在此标出>",
-        "```",
-        "",
-        "## 三、改动点清单",
-        "",
-        "| # | 文件 / 位置 | 动作（新增/改/删） | 一句话 |",
-        "|---|---|---|---|",
-        "| 1 |  |  |  |",
-        "",
-        "## 四、数据与调用流",
-        "",
-        "```",
-        "<关键路径的调用或数据流；只画受影响的那条>",
-        "```",
-        "",
-        "## 五、拆分出的执行任务",
-        "",
-        "| 顺序 | TASK-ID | 任务 | 依赖 |",
-        "|---|---|---|---|",
-        "| 1 | — |  |  |",
-        "",
-        "## 六、风险与未决",
-        "",
-        "- [ ] <未决问题 / 需要用户拍板的选择>",
+    """设计蓝图 = 人读结构视图，载体为 HTML（契约见 references/design.md §0/§1）。
+
+    必备节与 templates/designs/DESIGN_BLUEPRINT.template.html 同源（gen_views.py 会核对）。
+    """
+    secs = ["现状 → 目标","结构与依赖","改动点","数据与调用流","拆分出的执行任务","风险与未决","实施依据"]
+    body = []
+    for i, s in enumerate(secs, 1):
+        body.append("  <div class=card><h2>%d、%s</h2>" % (i, s))
+        if s == secs[2]:
+            body.append("    <table><tr><th>#</th><th>文件 / 位置</th><th>动作</th><th>一句话</th></tr><tr><td>1</td><td></td><td></td><td></td></tr></table>")
+        elif s == secs[4]:
+            body.append("    <table><tr><th>顺序</th><th>TASK-ID</th><th>任务</th><th>依赖</th></tr><tr><td>1</td><td>—</td><td></td><td></td></tr></table>")
+        elif s == secs[5]:
+            body.append("    <ul><li>[ ] 未决问题 / 需要用户拍板的选择</li></ul>")
+        elif s == secs[6]:
+            body.append("    <ul><li>① 这项工作在<strong>项目整体结构中的位置</strong>：</li><li>② 实施时<strong>依据什么结构</strong>（落点 / 影响面 / 顺序与依赖 / 可独立与不可独立）：</li></ul>")
+        else:
+            body.append("    <pre>（填写：%s）</pre>" % s)
+        body.append("  </div>")
+    head = [
+        "<!DOCTYPE html>",
+        chr(60) + "html lang=zh-CN" + chr(62),
+        chr(60) + "head" + chr(62) + chr(60) + "meta charset=UTF-8" + chr(62),
+        chr(60) + "title" + chr(62) + topic + " · 设计蓝图" + chr(60) + "/title" + chr(62),
+        chr(60) + "style" + chr(62) + "body{font-family:PingFang SC,Microsoft YaHei,Segoe UI,Arial,sans-serif;background:#F4F3EE;color:#1A1B1C;line-height:1.7;padding:24px}",
+        ".wrap{max-width:980px;margin:0 auto}.card{background:#FFF;border:1px solid #E4E3DD;border-radius:12px;padding:16px 20px;margin-bottom:14px}",
+        "h2{font-size:15.5px;margin-bottom:8px}table{width:100%;border-collapse:collapse}",
+        "th,td{border:1px solid #E4E3DD;padding:6px 9px;font-size:12.5px;text-align:left;vertical-align:top}th{background:#F1F0EB}",
+        "pre{background:#F7F6F2;border:1px solid #E4E3DD;border-radius:8px;padding:10px 12px;font-size:12.5px}" + chr(60) + "/style" + chr(62) + chr(60) + "/head" + chr(62),
+        chr(60) + "body" + chr(62) + chr(60) + "div class=wrap" + chr(62),
+        chr(60) + "div class=hd" + chr(62) + chr(60) + "h1" + chr(62) + "设计蓝图 · " + topic + chr(60) + "/h1" + chr(62),
+        chr(60) + "div class=meta" + chr(62) + "DESIGN-ID：" + ds_id + " ｜ 状态：草案 ｜ 日期：" + day + " ｜ 影响模式：" + mode + " ｜ 配套详述：同目录 " + topic + ".md" + chr(60) + "/div" + chr(62),
+        chr(60) + "div class=meta" + chr(62) + "人读的结构视图：不放长段落（上限 {{config:capacity.blueprint_max_para_chars}} 字符）；总行数上限 {{config:capacity.blueprint_max_lines}}（<strong>超限仅提醒</strong>）。" + chr(60) + "/div" + chr(62) + chr(60) + "/div" + chr(62),
     ]
-    return "\n".join(L) + "\n"
+    return "\n".join(head + body + [chr(60) + "/div" + chr(62) + chr(60) + "/body" + chr(62), ""])
 
 # ── 任务认领（租约）：把「请遵守单写者」变成「脚本会拒绝」──────────
 def _find_card(root: Path, name: str):
@@ -628,7 +584,7 @@ def cmd_claim(root: Path, a) -> int:
     if okk:
         note("离开或让出前跑 release；忘了也没关系——租约到期后别人可自动接手")
         note("建议顺手留一条运行证据（谁在什么运行时/模型上接手）："
-             "python scripts/stamp.py --evidence --append --root <工作区根>")
+             "python scripts/stamp.py --evidence --append --root <管理区>")
     return summary()
 
 
@@ -646,6 +602,19 @@ def cmd_release(root: Path, a) -> int:
     return summary()
 
 def cmd_new_card(root: Path, a) -> int:
+    #  值类口径（机检）：任务卡必须显式表态——--design-id DSN-… 或 --skip-design；
+    #  跳过设计必须显式表态，不许留空或「—」（见 references/design.md「先跳过」）。
+    if not getattr(a, "design", False):
+        if getattr(a, "skip_design", False) and getattr(a, "design_id", ""):
+            problem("--design-id 与 --skip-design 只能给一个（二选一）"); return 3
+        if getattr(a, "skip_design", False):
+            a.design_id = "先跳过"
+        elif getattr(a, "design_id", ""):
+            if not str(a.design_id).startswith("DSN-"):
+                problem("--design-id 必须是 DSN-YYYYMMDD-XXXXXX（见 references/design.md）；收到：%s" % a.design_id); return 3
+        else:
+            problem("建任务卡必须显式表态：给 --design-id DSN-… 或 --skip-design（跳过设计）")
+            note("例：closeout.py <管理区> new-card <卡名> --skip-design"); return 3
     name = (a.name or "").strip()
     if not name:
         problem("卡名不能为空")
@@ -655,7 +624,7 @@ def cmd_new_card(root: Path, a) -> int:
         d = root / "designs"
         d.mkdir(parents=True, exist_ok=True)
         dest = d / ("%s.md" % safe)
-        bp = d / ("%s.blueprint.md" % safe)
+        bp = d / ("%s.blueprint.html" % safe)
         mode = a.mode or str(config(root, "collaboration.mode", "light"))
         ds_id = "DSN-%s-%s" % (a.date.replace("-", ""), _serial())
         # **两份文件一起建**：一份设计就是两件套（references/design.md §1）。
@@ -664,10 +633,10 @@ def cmd_new_card(root: Path, a) -> int:
             problem("同名设计卡已存在（或无法创建），不覆盖：designs/%s.md" % safe)
             return summary()
         if not _create_new(bp, _render_blueprint(name, mode, a.date, ds_id)):
-            note("蓝图未创建（同名已存在）：designs/%s.blueprint.md" % safe)
-        ok("已建设计卡：designs/%s.md（详述）+ designs/%s.blueprint.md（蓝图）（状态＝草案）" % (safe, safe))
+            note("蓝图未创建（同名已存在）：designs/%s.blueprint.html" % safe)
+        ok("已建设计卡：designs/%s.md（详述）+ designs/%s.blueprint.html（蓝图）（状态＝草案）" % (safe, safe))
         note("**先填蓝图**（结构：现状→目标 / 改动点 / 拆分）给用户确认方向；确认后再补详述")
-        note("补齐详述的「范围与不变式 / 迁移与回滚 / 验证证据」；批准后按批准结论建执行卡（未批准不生成执行卡）")
+        note("补齐详述的「范围与不变式 / 迁移与回滚 / 验证证据」；定稿后按定稿结论建任务卡（未定稿不生成任务卡）")
         return summary()
     t = root / "tasks"
     if not t.is_dir():
@@ -718,9 +687,7 @@ def cmd_reviews_archive(root: Path, a) -> int:
     prev_orig = read(cold)
     prev = prev_orig
     if not prev:
-        prev = ("# 复盘记录冷区（REVIEWS 滚动归档）\n\n"
-                "> 由 `scripts/closeout.py reviews-archive` 追加。**只增不删**：需要历史时在此定点查。\n"
-                "> 热区（工作区根 `REVIEWS.md`）只保留尾部若干行，上限见 `capacity.reviews_hot_lines`。\n")
+        prev = ((Path(__file__).resolve().parent / "templates" / "closeout_cmd_reviews_archive.md").read_text(encoding="utf-8"))
     if not prev.endswith("\n"):
         prev += "\n"
     # **冷区先写成功，再截热区**——反过来会出现「热区少了、冷区没有」的丢行。
@@ -740,10 +707,10 @@ def cmd_reviews_archive(root: Path, a) -> int:
 
 # ── 设计归档：走完流程的设计卡移入 designs/archives/ ──────────────
 # 触发条件（references/design.md §4，满足其一）：
-#   ① 已批准 **且**「拆分出的执行卡」非空 **且** 每个 TASK-ID 都能在 tasks/ 或 archives/done/ 找到
+#   ① 已定稿 **且**「拆分出的任务卡」非空 **且** 每个 TASK-ID 都能在 tasks/ 或 archives/done/ 找到
 #   ② 状态 ∈ {已废弃, 已拒绝}
-# 判据取自**痕迹**不是声明：用户说"拆完了"不算数，"列出的执行卡确实存在"才算（audit.md §2.0）。
-DESIGN_STATES = ("草案", "评审中", "已批准", "已拒绝", "已废弃")
+# 判据取自**痕迹**不是声明：用户说"拆完了"不算数，"列出的任务卡确实存在"才算（audit.md §2.0）。
+DESIGN_STATES = ("草案", "评审中", "已定稿", "已拒绝", "已废弃")
 DESIGN_VOID = ("已废弃", "已拒绝")
 
 
@@ -769,7 +736,7 @@ def cmd_design_archive(root: Path, a) -> int:
         return summary()
     stem = Path((a.name or "").strip()).stem
     if not stem:
-        problem("设计主题不能为空")
+        problem("设计卡名不能为空")
         return summary()
     src = d / ("%s.md" % stem)
     if not src.exists():
@@ -779,7 +746,7 @@ def cmd_design_archive(root: Path, a) -> int:
             return summary()
         src = cand[0]
         stem = src.stem
-    bp = d / ("%s.blueprint.md" % stem)
+    bp = d / ("%s.blueprint.html" % stem)
     txt = read(src)
     if txt is None:
         problem("设计详述不可读：designs/%s.md" % stem)
@@ -791,35 +758,35 @@ def cmd_design_archive(root: Path, a) -> int:
 
     if state in DESIGN_VOID:
         ok("触发条件②：设计%s" % state)
-    elif state == "已批准":
-        raw_ids = _field_of(txt, "拆分出的执行卡")
+    elif state == "已定稿":
+        raw_ids = _field_of(txt, "拆分出的任务卡")
         if raw_ids is None:
-            problem("缺少「拆分出的执行卡」字段——它是归档门禁判据，不能省（见 references/design.md §4）")
+            problem("缺少「拆分出的任务卡」字段——它是归档门禁判据，不能省（见 references/design.md §4）")
             return summary()
         if raw_ids in ("—", "-", ""):
-            problem("状态＝已批准，但「拆分出的执行卡」仍是「—」：触发条件①不成立（设计尚未拆完）")
+            problem("状态＝已定稿，但「拆分出的任务卡」仍是「—」：触发条件①不成立（设计尚未拆完）")
             note("若这份设计最终不做了，应先把状态改为「已废弃」再归档——**不要用归档掩盖未拆完**")
             return summary()
         ids = re.findall(r"TASK-[0-9]{8}-[0-9A-Z]{6}", raw_ids)
         if not ids:
-            problem("「拆分出的执行卡」里没有合法 TASK-ID：%s" % raw_ids[:60])
+            problem("「拆分出的任务卡」里没有合法 TASK-ID：%s" % raw_ids[:60])
             return summary()
         missing = [t for t in ids if not _task_id_exists(root, t)]
         if missing:
-            problem("声明拆出的执行卡在工作区里找不到：%s" % "、".join(missing))
+            problem("声明拆出的任务卡在工作区里找不到：%s" % "、".join(missing))
             note("声明与痕迹不符 —— 拒绝归档（先建卡，或把该 ID 从字段里去掉）")
             return summary()
-        ok("触发条件①：已批准，且列出的 %d 张执行卡均存在" % len(ids))
+        ok("触发条件①：已定稿，且列出的 %d 张任务卡均存在" % len(ids))
     else:
-        problem("状态「%s」不在归档触发条件内（需：已批准且拆完 / 已废弃 / 已拒绝）" % state)
+        problem("状态「%s」不在归档触发条件内（需：已定稿且拆完 / 已废弃 / 已拒绝）" % state)
         return summary()
 
     if not bp.exists():
-        problem("配套蓝图缺失：designs/%s.blueprint.md —— **两份文件必须一起移**，缺一份不算完整设计" % stem)
+        problem("配套蓝图缺失：designs/%s.blueprint.html —— **两份文件必须一起移**，缺一份不算完整设计" % stem)
         return summary()
     dst_dir = d / "archives"
     if a.dry_run:
-        ok("预览：designs/%s.md + designs/%s.blueprint.md → designs/archives/" % (stem, stem))
+        ok("预览：designs/%s.md + designs/%s.blueprint.html → designs/archives/" % (stem, stem))
         return summary()
     for p in (src, bp):
         if (dst_dir / p.name).exists():
@@ -828,7 +795,7 @@ def cmd_design_archive(root: Path, a) -> int:
     dst_dir.mkdir(parents=True, exist_ok=True)
     for p in (src, bp):
         os.replace(p, dst_dir / p.name)
-    ok("已归档设计：designs/%s{.md, .blueprint.md} → designs/archives/（两份一起移，**未删除**）" % stem)
+    ok("已归档设计：designs/%s{.md, .blueprint.html} → designs/archives/（两份一起移，**未删除**）" % stem)
     note("设计卡不进 INDEX / 不动快照 —— 设计区的进出不产生索引维护成本")
     return summary()
 
@@ -878,7 +845,7 @@ def cmd_api(a) -> int:
     print("原子性：atomic＝单文件 CAS（不会半成品）· best-effort＝多文件（**不是事务**，可能部分成功、重跑可收敛）· new-file · read-only")
     print("%s" % "-" * 108)
     print("退出码：0 全通过 · 1 有[问题] · 2 仅[待核] · 3 脚本自身错误")
-    print("调用方式：python closeout.py <工作区根> <端点> [参数] —— 任何语言可调，看退出码")
+    print("调用方式：python closeout.py <管理区> <端点> [参数] —— 任何语言可调，看退出码")
     print("写操作一律经此入口；直接编辑共享文件＝绕过，由 check_closeout.py 的哈希漂移检测抓（见 references/concurrency.md §0）")
     return 0
 
@@ -1019,7 +986,8 @@ def build_parser():
     p5.add_argument("--design", action="store_true", help="建的是设计卡（草案态，进 designs/）")
     p5.add_argument("--project", default="[项目名称]")
     p5.add_argument("--module", default="[模块]")
-    p5.add_argument("--design-id", default="", help="任务卡关联的设计卡 ID（已批准的设计卡）")
+    p5.add_argument("--design-id", default="", help="任务卡关联的设计卡 ID（已定稿的设计卡）")
+    p5.add_argument("--skip-design", action="store_true", help="显式跳过设计：任务卡 DESIGN-ID 写「先跳过」（与 --design-id 二选一）")
     p5.add_argument("--mode", default="", help="设计卡的影响模式；默认取实例 MAP 的协作模式")
     p5.add_argument("--date", default=date.today().isoformat())
 
@@ -1057,7 +1025,7 @@ def main() -> int:
         return cmd_api(a)
     root = Path(a.root)
     if not root.is_dir():
-        problem("工作区根不存在：%s" % root)
+        problem("管理区不存在：%s" % root)
         return summary()
     #  这里**不放开关**：任何「若为假只打一句 note 就继续执行」的分支都是
     #  「声称跳过而实际执行」。三个读不到也不生效的开关**不登记**（见 _common.BOOL_KEYS 的说明）。

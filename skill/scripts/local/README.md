@@ -63,7 +63,7 @@ from _common import ok, problem, tbd, note, read, run, summary          # noqa: 
 ## 5. 起手用脚手架，不要手写样板
 
 ```
-python scripts/new_local.py <工作区根> <脚本名> --purpose "<一句话用途>"
+python scripts/new_local.py <管理区> <脚本名> --purpose "<一句话用途>"
 ```
 
 生成 `scripts/local/<脚本名>.py`：统一三态、退出码、参数解析、统计汇总**都已就位**，
