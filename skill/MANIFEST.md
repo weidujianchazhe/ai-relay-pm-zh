@@ -147,7 +147,7 @@ scripts/                        可执行脚本（通用门禁；一表全览见
   new_local.py                    脚手架：生成符合统一接口的项目专属脚本骨架
   local/                          项目自定义脚本（技能包升级不覆盖；契约见 local/README.md）
 templates/                      模板：MAP/STATE/INDEX/REVIEWS/任务卡/设计卡+设计蓝图/交接 + CARD.md（单文件卡片）
-adapters/                       按语言落地附录（python / javascript / typescript / java / go / rust），不属技能正文
+adapters/                       按语言落地附录（**各语言一份，以目录为准、不写死名单**），不属技能正文
 locales/                        展示元数据（displayName / brief，供桌面插件页显示）
 examples/                       范例库骨架（索引表 + 入库流程 + project/external 两分区；**本体不随包分发**）
 ci/                             CI 接线样板（不属技能正文）
