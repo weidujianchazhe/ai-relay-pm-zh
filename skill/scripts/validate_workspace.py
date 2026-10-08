@@ -27,7 +27,7 @@ V2_FILES = ["MANIFEST.md", "config.yml"]
 V2_DIRS = ["references", "scripts"]
 
 # 冻结区（改名即破坏功能）——抽查最关键的几个
-CARD_FIELDS = ["承接", "进度锚点", "上次交接", "已提炼", "代码根路径", "涉及"]
+REQUIRED_CARD_FIELDS = ["承接", "进度锚点", "上次交接", "已提炼", "代码根路径", "涉及"]
 HANDOVER_BLOCKS = ["本次需求", "本次涉及工程信息", "改动点", "验证结果", "数据影响", "下一步", "任务卡更新"]
 
 def main():
@@ -77,14 +77,14 @@ def main():
         miss = {}
         for c in cards:
             t = read(c) or ""
-            for f in CARD_FIELDS:
+            for f in REQUIRED_CARD_FIELDS:
                 if f not in t:
                     miss.setdefault(f, []).append(c.name)
         if miss:
             for f, names in miss.items():
                 problem("字段「%s」缺失于 %d 张卡：%s" % (f, len(names), "、".join(names[:3])))
         else:
-            ok("%d 张卡均含 %d 个冻结字段" % (len(cards), len(CARD_FIELDS)))
+            ok("%d 张卡均含 %d 个必需字段" % (len(cards), len(REQUIRED_CARD_FIELDS)))
 
     print("== 3b. 设计区（designs/）—— 成对性 / 蓝图长度 / 归档成对 ==")
     _check_designs(root)

@@ -428,9 +428,9 @@ def cmd_card_archive(root: Path, a) -> int:
 
 
 # ── 建卡：用户说一句话 → 字段齐全的卡（任务卡 / 设计卡）────────────
-# 字段名是**冻结值**（references/artifacts.md §2）：改这里的 CARD_FIELDS 必须同时改
+# 字段名是**冻结值**（references/artifacts.md §2）：改这里的 CARD_SKELETON_FIELDS 必须同时改
 # templates/tasks/TASK_CARD.template.md，否则 gen_views.py --check 会报红。
-CARD_FIELDS = ["TASK-ID", "DESIGN-ID", "EVENT-ID", "状态", "描述", "要点", "代码根路径",
+CARD_SKELETON_FIELDS = ["TASK-ID", "DESIGN-ID", "EVENT-ID", "状态", "描述", "要点", "代码根路径",
                "涉及", "承接", "进度锚点", "上次交接", "已提炼", "设计偏离", "派发摘录",
                "验收状态", "并发元数据"]
 DESIGN_FIELDS = ["DESIGN-ID", "状态", "提议人", "定稿人", "定稿 EVENT-ID", "影响模式",

@@ -157,7 +157,7 @@ def main():
     except Exception as e:  # 脚本被改名/移走时明确报错，不静默跳过
         problem("无法导入 scripts/closeout.py（建卡骨架所在）：%s" % e)
         return summary()
-    pairs = [(pkg / "templates" / "tasks" / "TASK_CARD.template.md", _co.CARD_FIELDS, "任务卡"),
+    pairs = [(pkg / "templates" / "tasks" / "TASK_CARD.template.md", _co.CARD_SKELETON_FIELDS, "任务卡"),
              (pkg / "templates" / "designs" / "DESIGN_CARD.template.md", _co.DESIGN_FIELDS, "设计卡")]
     for tpl, fields, label in pairs:
         t = read(tpl)
@@ -184,7 +184,7 @@ def main():
             problem("%s —— 两处必须同步（字段名与节名是冻结值，见 references/artifacts.md §2 / design.md §6）" % x)
     else:
         ok("任务卡 %d 字段、设计卡 %d 字段、蓝图 %d 节：模板与建卡骨架一致"
-           % (len(_co.CARD_FIELDS), len(_co.DESIGN_FIELDS), len(_co.BLUEPRINT_SECTIONS)))
+           % (len(_co.CARD_SKELETON_FIELDS), len(_co.DESIGN_FIELDS), len(_co.BLUEPRINT_SECTIONS)))
 
     print("== 6. 脚本兜底值 · config/defaults.yml 逐键一致 ==")
     # 为什么查这个：脚本必须能脱离技能包单独跑（所以要兜底值），
