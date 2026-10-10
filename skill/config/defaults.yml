@@ -29,7 +29,7 @@ capacity:
   report_archive_threshold: 20 # reports 冷区归档触发篇数
   task_card_hot_limit: 0      # 活跃任务卡上限（0 = 不限，按需启用）
   reviews_hot_lines: 200      # REVIEWS.md 热区行数上限（超出部分由 closeout.py reviews-archive 滚入 archives/REVIEWS_archived.md）
-  # 设计蓝图（designs/<卡名>.blueprint.md）——**人读视图**，超限就不再"直观"。
+  # 设计蓝图（designs/<卡名>.blueprint.html）——**人读视图**，超限就不再"直观"。
   # 两个上限防的是同一件事：蓝图长成第二份详述（两份文件立刻开始漂移，且每轮重写代价回升）。
   blueprint_max_lines: 100     # 蓝图总行数上限（**超线仅提醒，不阻断**——人读视图的直观性提醒线）
   blueprint_max_para_chars: 160 # 蓝图里单个段落字符数上限（结构视图不该有长段落）

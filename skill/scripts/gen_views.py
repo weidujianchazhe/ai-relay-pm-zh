@@ -365,7 +365,7 @@ def main():
     listed = set()
     # **只认「缩进清单条目」**（形如 「  overview.py  说明」）：
     #  在整篇里抓文件名会把散文里提到的也算成登记（实测误报：INDEX.md / MAP.md 是工作区文件、
-    #  blueprint.md 是模板名），反而把真问题淹掉。
+    #  设计蓝图模板名），反而把真问题淹掉。
     in_block, cur_dir = False, ""
     for line in man.splitlines():
         if line.strip().startswith("```"):
@@ -616,16 +616,21 @@ def main():
         _dir = pkg / "templates" / "designs"
         if not any(t.suffix == ("." + _want) for t in _dir.glob("DESIGN_BLUEPRINT.template.*")):
             _bad.append("模板层：templates/designs/DESIGN_BLUEPRINT.template.%s 缺失" % _want)
-        _co = read(pkg / "scripts" / "closeout.py") or ""
-        _exts = set(re.findall(r"blueprint\.([A-Za-z0-9]+)", _co))
-        _wrong = sorted(e for e in _exts if e != _want)
-        if _wrong:
-            _bad.append("生成器层：closeout.py 仍出现旧载体 .blueprint.%s" % "、".join(_wrong))
-        elif _want not in _exts:
-            _bad.append("生成器层：closeout.py 未产出 .blueprint.%s" % _want)
-        _gv = read(pkg / "scripts" / "gen_views.py") or ""
-        if ("DESIGN_BLUEPRINT.template.%s" % _want) not in _gv:
-            _bad.append("验证器层：gen_views.py 未按 .%s 模板核对" % _want)
+        # 旧写法只查 closeout.py 与 gen_views.py 自己 —— **漏了真正的验证器 validate_workspace.py 与自检夹具 selftest_gates.py
+        # （2026-10 实测：官方 new-card --design 产出 .html，而 validate_workspace 找 .md → 必然报红；三处互相掩护长期存活）。
+        # 根修：覆盖面【由磁盘驱动】—— 扫描 scripts/ 下**所有** .py，任一脚本引用旧载体即报红；且必须至少有一个脚本引用新载体。
+        _scripts = sorted((pkg / "scripts").glob("*.py"))
+        _hit_new = False
+        for _sp in _scripts:
+            _txt = read(_sp) or ""
+            _e = set(re.findall(r"blueprint\.([A-Za-z0-9]+)", _txt))
+            _bad_e = sorted(x for x in _e if x != _want)
+            if _bad_e:
+                _bad.append("脚本层：%s 仍出现旧载体 .blueprint.%s" % (_sp.name, "、".join(_bad_e)))
+            if ("blueprint." + _want) in _txt:
+                _hit_new = True
+        if not _hit_new:
+            _bad.append("脚本层：scripts/ 下没有任何脚本引用 .blueprint.%s" % _want)
         for _b in _bad:
             problem("载体契约不一致（规范＝.%s）：%s" % (_want, _b))
         if not _bad:

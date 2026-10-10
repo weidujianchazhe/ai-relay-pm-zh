@@ -43,7 +43,7 @@
 ├── examples/             范例库（**按需**；从技能包 examples/ 复制骨架后自行积累；规则见 references/code-style.md §S5）
 ├── designs/              设计区（**不在接手路径上**；形态与归档规则见 references/design.md）
 │   ├── <主题>.md           详述（叙述：范围 / 迁移 / 验证 / 理由）
-│   ├── <主题>.blueprint.md 蓝图（结构：一屏可扫，给人看）
+│   ├── <主题>.blueprint.html 蓝图（结构：一屏可扫，给人看）
 │   └── archives/           设计归档（已拆完全部任务 / 已作废）
 ├── archives/
 │   ├── done/             完成卡归档
@@ -65,7 +65,7 @@
 | **分支码格式** | `XX0000`（两位大写字母 + 4~5 位数字） | 编号校验 / 审计 ID 锚 |
 | **记录文件名** | `YYYY-MM-DD_主题_AI标识.md` | 命名校验 |
 | **目录名** | `tasks/` `reports/` `archives/` `archives/done/` `designs/` `designs/archives/` `tools/` `references/` `scripts/` `scripts/local/` | 全部脚本 / MAP 路径注册表 |
-| **设计区文件名** | 详述 `<主题>.md` · 蓝图 `<主题>.blueprint.md`（后缀冻结） | 成对性校验 / 设计归档脚本 |
+| **设计区文件名** | 详述 `<主题>.md` · 蓝图 `<主题>.blueprint.html`（后缀冻结） | 成对性校验 / 设计归档脚本 |
 | **设计卡字段** | 「拆分出的任务卡」 | 设计归档门禁判据 |
 
 > **改任何一项之前**：先过 `references/change-control.md` §A 第 2 条（交叉影响检查），grep 全包列出同步清单。

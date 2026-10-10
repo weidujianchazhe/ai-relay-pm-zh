@@ -98,7 +98,7 @@ def _mk_spec_only(d):
 def _mk_long_blueprint(d):
     """蓝图里塞一段长散文 —— 详述被搬进蓝图，两份文件开始漂移。"""
     _mk_spec_only(d)
-    (d / "designs" / "方案.blueprint.md").write_text(
+    (d / "designs" / "方案.blueprint.html").write_text(
         "# 方案 · 设计蓝图\n\n## 一、现状 → 目标（改什么）\n\n"
         + "这是一段本该写在详述里、却被搬进蓝图的散文。" * 12 + "\n",
         encoding="utf-8")

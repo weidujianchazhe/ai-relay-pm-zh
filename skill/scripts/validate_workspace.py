@@ -170,19 +170,21 @@ def _check_designs(root: Path):
         note("无 designs/ —— 不需要设计的项目正常（设计区按需建）")
         return
     specs, bps = [], []
-    for p in sorted(d.glob("*.md")):
-        (bps if p.name.endswith(".blueprint.md") else specs).append(p)
+    # **必须由扩展名驱动**：只 glob *.md 会让 .blueprint.html 永不进入 bps →
+    # 蓝图长度 / 长段落 / 孤儿蓝图三项检查对 HTML 蓝图全部失效（2026-10 实测：selftest 用例「蓝图塞长段落」报「门禁对这类故障是瞎的」）。
+    for p in sorted(list(d.glob("*.md")) + list(d.glob("*.html"))):
+        (bps if p.name.endswith(".blueprint.html") else specs).append(p)
     if not specs and not bps:
         note("designs/ 为空 —— 活跃设计区保持清空是健康状态（走完流程的设计已入 designs/archives/）")
         return
     for s in specs:
-        if not (d / (s.stem + ".blueprint.md")).exists():
-            problem("设计缺蓝图：designs/%s.blueprint.md 不存在 —— 一份设计＝详述 + 蓝图两件套" % s.stem)
+        if not (d / (s.stem + ".blueprint.html")).exists():
+            problem("设计缺蓝图：designs/%s.blueprint.html 不存在 —— 一份设计＝详述 + 蓝图两件套" % s.stem)
         t = read(s) or ""
         if "拆分出的任务卡" not in t:
             problem("设计卡缺冻结字段「拆分出的任务卡」：designs/%s.md（归档门禁判据）" % s.stem)
     for b in bps:
-        if not (d / (b.name[: -len(".blueprint.md")] + ".md")).exists():
+        if not (d / (b.name[: -len(".blueprint.html")] + ".md")).exists():
             problem("孤儿蓝图（没有对应详述）：designs/%s" % b.name)
     cap_lines = int(config(root, "capacity.blueprint_max_lines", 100))
     cap_para = int(config(root, "capacity.blueprint_max_para_chars", 160))

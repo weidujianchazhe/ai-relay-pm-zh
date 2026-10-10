@@ -13,7 +13,7 @@
 跑 `overview.py` 看「接手包」一行。**读进来的东西会留在上下文里。**
 **留痕不是读物**：`REVIEWS.md` / `archives/` / `reports/` 冷区 / `INDEX.md` 冷区是**只增的记录**，只在核查、恢复、追责时才查——**不进接手路径**（读取纪律见 `references/artifacts.md` §8）。
 
-**设计两件套**（要先定方案时）：① 蓝图 `designs/<卡名>.blueprint.md`——**一屏结构图，给人看**，每轮整篇重写 ② 详述 `designs/<卡名>.md`——叙述与理由，**只做定点改**
+**设计两件套**（要先定方案时）：① 蓝图 `designs/<卡名>.blueprint.html`——**一屏结构图，给人看**，每轮整篇重写 ② 详述 `designs/<卡名>.md`——叙述与理由，**只做定点改**
 > **先蓝图、后详述**（方向没定不写长文）；未定稿的设计不生成任务卡；拆完或作废后 `closeout.py design-archive` 收进 `designs/archives/`（**不放工作记录归档**）
 
 **作业四条**

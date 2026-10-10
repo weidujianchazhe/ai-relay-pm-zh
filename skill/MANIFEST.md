@@ -53,7 +53,7 @@
 | **项目地图（MAP）** | `templates/MAP.template.md` | 一个 `MAP.md` | 工作区 / 索引 / 快照 / 脚本 | `overview.py <目录>` 只有 MAP 也能跑（缺的部分标「无」）· exit 0 |
 | **任务卡·单文件**（卡片模式） | `templates/CARD.md` | 一个 `.md` | 索引 / 快照 / 记录 / 脚本 / 门禁——**全都不需要** | **不跑任何脚本**：提交流程＝追加一行交接流水 |
 | **任务卡·工作区**（light 起） | `templates/tasks/TASK_CARD.template.md` + `references/workflow.md` §4 | `tasks/` + `reports/` + `INDEX.md` + `archives/` | MAP / STATE / REVIEWS（属 standard 起） | 提交时 `closeout.py` → `check_closeout.py`（门禁）；改索引后 `check_index.py`。**提交流程三项**，第四项「快照」属 standard |
-| **设计卡** | `references/design.md` + `templates/designs/` | `designs/<卡名>.md` + `designs/<卡名>.blueprint.md` | 工作区 / 索引 / 快照（可先有设计、后拆卡） | `new-card --design` 与 `design-archive` 在**任意目录**可用 · exit 0 |
+| **设计卡** | `references/design.md` + `templates/designs/` | `designs/<卡名>.md` + `designs/<卡名>.blueprint.html` | 工作区 / 索引 / 快照（可先有设计、后拆卡） | `new-card --design` 与 `design-archive` 在**任意目录**可用 · exit 0 |
 | **代码书写规范** | `references/code-quality.md` + `references/code-style.md` | `scripts/code_metrics.py` + `scripts/_common.py` + 两份规范 | 工作区 / MAP / `config/`（阈值有**脚本内兜底**） | 只拷两个脚本进项目即可跑；阈值走兜底（14 个数值，由 gen_views 第 6 节逐键比对） |
 | **全套（管理区）** | `SKILL.md` | 上表全部 + `INDEX/STATE/REVIEWS/archives` | — | 全套门禁 |
 | **语言适配层（C / C++ / Python）** | `references/language-adapters.md` | 探针契约 + 能力接口（INSPECT / BUILD / TEST / AUDIT / VERIFY）+ 工程模型（语言/构建/测试/工具链/目标） | 非 Python 栈的成熟工具（clang-tidy / cppcheck / cmake / ctest）未装时**只报待核，不猜度量** | `code_metrics.py` 实测 `COLLECTORS={python, c, cpp}`；c/cpp 未接线 -> `tbd` |
