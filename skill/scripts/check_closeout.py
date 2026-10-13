@@ -17,8 +17,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
-    config, index_rows, iter_cards, newest_handoff, note, ok, problem, read, resolve_under, run,
-    summary, tbd,
+    branch_pattern, config, index_rows, iter_cards, newest_handoff, note, ok, problem, read,
+    resolve_under, run, summary, tbd,
 )
 
 BLOCKS = ["本次需求", "本次涉及工程信息", "改动点", "验证结果", "数据影响", "下一步", "任务卡更新"]
@@ -83,7 +83,9 @@ def main():
     rows = index_rows(root / "INDEX.md")
     #  判据（两选一命中即算已登记）：① 索引行里出现**最新报告的文件名**（索引的最后一列就是报告路径）；
     #    ② 或出现该报告提到的任一形如 XX0000 的编号。**只要索引有可解析行却两样都命中不了 → 报问题。**
-    ids = sorted({t for t in re.findall(r"\b[A-Z]{2}\d{4}\b", read(rep) or "")}) if rep else []
+    #  短号格式**不再硬编码 4 位**：唯一真值 = config/defaults.yml 的 naming.branch_code_pattern
+    #  （2026-10 实测：此处写死 \d{4}，而系统允许 4~5 位 → 5 位短号在收尾记录里会被漏检）。
+    ids = sorted({t for t in re.findall(r"\b" + branch_pattern(root) + r"\b", read(rep) or "")}) if rep else []
     joined = [" ".join(cells) for cells, _l in rows]
     by_file = [i for i, j in enumerate(joined) if rep and rep.name in j]
     by_id = [i for i, j in enumerate(joined) if any(t in j for t in ids)]

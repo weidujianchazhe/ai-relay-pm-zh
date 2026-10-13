@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
-    config, index_rows, iter_cards, iter_reports, note, ok, problem, read,
+    branch_pattern, config, index_rows, iter_cards, iter_reports, note, ok, problem, read,
     resolve_under, run, summary, tbd,
 )
 
@@ -87,7 +87,7 @@ def main():
         if not path.exists():
             continue
         txt = read(path) or ""
-        n = len(re.findall(r"(?m)^\|\s*[A-Z]{2}[0-9]{4,5}\s*\|", txt)) if unit == "行" else len(txt)
+        n = len(re.findall(r"(?m)^\|\s*" + branch_pattern(root) + r"\s*\|", txt)) if unit == "行" else len(txt)
         cap = config(root, key)
         (ok if (cap is None or n <= cap) else problem)("%s %d %s（上限 %s）" % (label, n, unit, cap))
 

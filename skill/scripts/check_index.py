@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import index_rows, note, ok, problem, read, resolve_under, summary, tbd, run  # noqa: E402
+from _common import branch_pattern, index_rows, note, ok, problem, read, resolve_under, summary, tbd, run  # noqa: E402
 
 VALID_TYPES = ["[接力]", "[完成]", "[废弃]", "[里程碑]"]
 BRANCH_RE = re.compile(r"^\|\s*([A-Z]{2})\s*\|")
@@ -45,7 +45,7 @@ def check_file(path, label, root, branches, strict_cells=True):
         if not s.startswith("|"):
             continue
         cells = [c.strip() for c in s.strip("|").split("|")]
-        if cells and re.match(r"^[A-Z]{2}[0-9]{4,5}$", cells[0]) and len(cells) < 6:
+        if cells and re.match("^" + branch_pattern(root) + "$", cells[0]) and len(cells) < 6:
             bad_cells.append((cells[0], len(cells), i))
     if bad_cells:
         for no, n, ln in bad_cells:

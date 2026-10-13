@@ -41,14 +41,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
-    config, index_rows, iter_cards, iter_reports, note, ok, problem, read, run, summary, tbd,
-    usage_exit,  # noqa: E402
+    branch_pattern, config, index_rows, iter_cards, iter_reports, note, ok, problem, read, run,
+    summary, tbd, usage_exit,  # noqa: E402
 )
 import lease  # noqa: E402  —— 任务租约与 CAS 原语（并发强制层，见 references/concurrency.md）
 
-ID_RE = re.compile(r"^([A-Z]{2})([0-9]{4,5})$")
 TYPES = ("[接力]", "[完成]", "[废弃]", "[里程碑]")
-ROW_RE = re.compile(r"^\|\s*([A-Z]{2}[0-9]{4,5})\s*\|")
+# 短号正则**不再硬编码**：唯一真值 = config/defaults.yml 的 naming.branch_code_pattern
+# （2026-10 实测：此处曾各写一遍同一正则，改配置不改行为 = 配置与实现脱节）。
+def _id_re(root=None):
+    return re.compile(r"^(" + branch_pattern(root) + r")$")
+def _row_re(root=None):
+    return re.compile(r"^\|\s*(" + branch_pattern(root) + r")\s*\|")
 
 
 def _atomic_write(path: Path, text: str):
@@ -137,13 +141,13 @@ def _split_index(txt: str):
     return lines[:head], lines[head], lines[sep], data, lines[i:]
 
 
-def _row_id(line: str):
-    m = ROW_RE.match(line.strip())
+def _row_id(line: str, root=None):
+    m = _row_re(root).match(line.strip())
     return m.group(1) if m else None
 
 
-def _sort_key(row_id: str):
-    m = ID_RE.match(row_id)
+def _sort_key(row_id: str, root=None):
+    m = _id_re(root).match(row_id)
     return (m.group(1), int(m.group(2))) if m else ("ZZ", 0)
 
 
@@ -153,7 +157,7 @@ def cmd_index_add(root: Path, a) -> int:
     if not idx.exists():
         problem("INDEX.md 不存在：%s" % idx)
         return summary()
-    if not ID_RE.match(a.id):
+    if not _id_re(root).match(a.id):
         problem("编号格式非法（应为两位大写字母 + 4~5 位数字）：%s" % a.id)
         return summary()
     if a.type not in TYPES:
@@ -168,11 +172,11 @@ def cmd_index_add(root: Path, a) -> int:
                 return summary()
 
     # 同分支严格递增（按数值）
-    branch, num = ID_RE.match(a.id).groups()
+    branch, num = _id_re(root).match(a.id).groups()
     mx = 0
     for p in (idx, cold):
         for cells, _ in index_rows(p):
-            m = ID_RE.match(cells[0])
+            m = _id_re(root).match(cells[0])
             if m and m.group(1) == branch:
                 mx = max(mx, int(m.group(2)))
     if int(num) <= mx:

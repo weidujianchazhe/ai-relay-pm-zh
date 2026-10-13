@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import config, index_rows, iter_cards, iter_reports, read, run  # noqa: E402
+from _common import branch_pattern, config, index_rows, iter_cards, iter_reports, read, run  # noqa: E402
 
 SEP = "-" * 52
 
@@ -154,7 +154,7 @@ def _inflight(path, minutes):
 def _branch_of(card):
     """分组依据：编号的两位分支码；无编号时用文件名首段。"""
     d = _card_fields(card)
-    m = re.match(r"([A-Z]{2})[0-9]{4,5}", d.get("编号", "")) or re.match(r"([A-Z]{2})[0-9]{4,5}", card.stem)
+    m = re.match("(" + branch_pattern() + ")", d.get("编号", "")) or re.match("(" + branch_pattern() + ")", card.stem)
     return m.group(1) if m else "—"
 
 

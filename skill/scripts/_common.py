@@ -295,6 +295,34 @@ def config(root, key, fallback=None):
         return d[key]
     return fallback
 
+
+# ── 短号格式（**唯一真值**：出厂 config/defaults.yml；实例可由 MAP 覆盖）──────────
+#  为什么放这里：此前 **7 处脚本各自硬编码**同一正则 —— 改 `branch_code_pattern`
+#  **根本不改变行为**（2026-10 实测：配置与实现脱节，字面巧合掩盖了脱节）。
+#  与下面 map_line_value 的理由同源：**只有一条读取路径**，否则迟早漂移成两套口径。
+#  失败语义：**缺失 / 非法一律抛 ValueError**，由调用方明确报错（**不静默回退**）。
+_BRANCH_CACHE = {}
+
+def branch_pattern(root=None):
+    """返回短号格式正则字符串（唯一真值）。配置缺失或非法时抛 ValueError。"""
+    key = str(Path(root)) if root is not None else ""
+    if key in _BRANCH_CACHE:
+        return _BRANCH_CACHE[key]
+    #  键路径是按 defaults.yml 的**缩进节**生成的（`naming:` 节下）——**不是裸键**（2026-10 实测：裸键取不到，冒烟即失败）。
+    pat = config(root if root is not None else ".", "naming.branch_code_pattern", None)
+    if not pat or not isinstance(pat, str):
+        raise ValueError("短号格式未配置：branch_code_pattern（见 config/defaults.yml）")
+    try:
+        re.compile(pat)
+    except re.error as e:
+        raise ValueError("branch_code_pattern 非法：%r（%s）" % (pat, e))
+    _BRANCH_CACHE[key] = pat
+    return pat
+
+def branch_re(root=None, anchors=True):
+    """编译后的短号正则；anchors=True 时加 \\b 词边界（用于正文抽取）。"""
+    pat = branch_pattern(root)
+    return re.compile((r"\b" + pat + r"\b") if anchors else pat)
 # ── 登记/声明类取值（自由文本）────────────────────────────────
 #  与 config() 的分工：config 只认数字 / 模式 / 开关 / 枚举（**有界的配置**）；
 #  这里取**无界的声明**（例如底座登记的模型名）。放在 _common 是为了**只有一条读取路径**，
@@ -352,18 +380,19 @@ def iter_reports(root):
     """交接记录：reports/*.md，排除模板。"""
     return [p for p in list_md(Path(root) / "reports") if not IS_TEMPLATE.search(p.name)]
 
-def index_rows(path):
+def index_rows(path, root=None):
     """解析索引表行 → [(cells, lineno)]；只看形如 | XX0000 | 开头的行。"""
     txt = read(path)
     if not txt:
         return []
     rows = []
+    _pat = branch_pattern(root)
     for i, line in enumerate(txt.splitlines(), 1):
         s = line.strip()
         if not s.startswith("|"):
             continue
         cells = [c.strip() for c in s.strip("|").split("|")]
-        if cells and re.match(r"^[A-Z]{2}[0-9]{4,5}$", cells[0]):
+        if cells and re.match("^" + _pat + "$", cells[0]):
             rows.append((cells, i))
     return rows
 

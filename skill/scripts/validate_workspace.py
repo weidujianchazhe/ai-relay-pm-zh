@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import config, iter_cards, note, ok, problem, read, strip_code, summary, tbd, run  # noqa: E402
+from _common import branch_pattern, config, iter_cards, note, ok, problem, read, strip_code, summary, tbd, run  # noqa: E402
 
 REQUIRED_FILES = ["MAP.md", "STATE.md", "INDEX.md", "REVIEWS.md", "SKILL.md"]
 REQUIRED_DIRS = ["tasks", "reports", "archives", "archives/done"]
@@ -106,7 +106,7 @@ def main():
     print("    协作模式 = %s" % config(root, "collaboration.mode"))
     idx = root / "INDEX.md"
     if idx.exists():
-        n = len(re.findall(r"(?m)^\|\s*[A-Z]{2}[0-9]{4,5}\s*\|", read(idx) or ""))
+        n = len(re.findall(r"(?m)^\|\s*" + branch_pattern(root) + r"\s*\|", read(idx) or ""))
         cap = config(root, "capacity.index_hot_rows", 20)
         (ok if n <= cap else problem)("索引热区 %d 行（上限 %s）" % (n, cap))
     st = root / "STATE.md"
