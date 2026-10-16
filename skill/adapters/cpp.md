@@ -20,7 +20,7 @@
 | 正文条款 | C++ 工具 | 说明 |
 |---|---|---|
 | 规模三档 | `lizard`（支持 C++）· `clang-tidy readability-function-size` | 沿用通用步骤 |
-| 复杂度 / 模板复杂度 | `lizard --CCN` · `clang-tidy readability-cognitive-complexity` | 模板复杂度另见语言差异表 |
+| 复杂度 / 模板复杂度 | `lizard --CCN`（圈复杂度）· `clang-tidy readability-cognitive-complexity`（认知复杂度） | **口径警告**：两者**不是同一指标**，**只选一条作为落点**，不得混用或互相折算；模板复杂度另见语言差异表 |
 | 命名与风格 | `clang-format`（Google / LLVM 预设） | 强制门禁 |
 | 正确性 | `-Wall -Wextra -Werror` · `clang-tidy` · `cppcheck` | |
 | **生命周期 / 所有权** | `clang-tidy cppcoreguidelines-*` · `-Wdangling` · C++ 生命期分析 | **C++ 的核心指标**，非规模问题 |
@@ -35,8 +35,9 @@
 |---|---|---|
 | 函数有效行 | `lizard --length {{config:code_quality.func_lines.blocked}}` | |
 | 圈复杂度 | `lizard --CCN {{config:code_quality.cyclomatic_complexity.blocked}}` | |
-| 嵌套深度 | `clang-tidy readability-function-size` 或 lizard 计数 | |
+| 嵌套深度 | **`lizard` 嵌套计数**（推荐）；`clang-tidy readability-function-size` 仅作参考 | **口径警告**：`readability-function-size` 检查的是**函数规模**（行数 / 语句数 / 参数数），**不是嵌套深度**——拿它当嵌套落点属口径错位。lizard 的嵌套计数才与正文「嵌套深度」同义 |
 | 覆盖率 | `gcovr --fail-under={{config:code_quality.coverage.core_business}}` | |
+| 文件长度 | 无对应 linter | **本适配器不提供该门禁**：非 Python 栈没有与正文「有效代码行」口径一致的成熟工具（同 Go / Rust）。**禁止用行宽类规则凑** |
 
 - **模板 / 泛型代码**：其复杂度可能由问题本身决定（见 code-quality §0）→ **允许专业复杂度，但必须显式声明来源** ✓
 - **规模类为观察**：不得拿 50 行 / CCN 15 去拆 C++ 的状态机、解析器或模板库 ✓

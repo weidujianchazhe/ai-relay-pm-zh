@@ -19,7 +19,7 @@
 | 正文条款 | C 工具 | 说明 |
 |---|---|---|
 | 规模三档 | `lizard`（原生支持 C）· `clang-tidy readability-function-size` | 沿用通用 lizard 步骤 |
-| 圈复杂度 / 嵌套 | `lizard --CCN` · `clang-tidy readability-cognitive-complexity` | |
+| 圈复杂度 / 嵌套 | `lizard --CCN`（圈复杂度）· `clang-tidy readability-cognitive-complexity`（认知复杂度） | **口径警告**：两者**不是同一指标**（圈复杂度数判定分支，认知复杂度按人类理解难度加权）。**只选一条作为落点**，不得混用，也不得互相折算 |
 | 命名与风格 | `clang-format`（.clang-format） | 强制门禁 |
 | 正确性 | `-Wall -Wextra -Werror` · `clang-tidy` · `cppcheck` | |
 | 未定义行为 | `-fsanitize=undefined,address`（UBSan / ASan）· MSan · TSan | 运行时证据（Q6） |
@@ -33,8 +33,9 @@
 |---|---|---|
 | 函数有效行 | `lizard --length {{config:code_quality.func_lines.blocked}}` | C 无函数长度 lint，沿用通用步骤 |
 | 圈复杂度 | `lizard --CCN {{config:code_quality.cyclomatic_complexity.blocked}}` | 同上 |
-| 嵌套深度 | `clang-tidy readability-function-size` 或 lizard 嵌套计数 | |
+| 嵌套深度 | **`lizard` 嵌套计数**（推荐）；`clang-tidy readability-function-size` 仅作参考 | **口径警告**：`readability-function-size` 检查的是**函数规模**（行数 / 语句数 / 参数数），**不是嵌套深度**——拿它当嵌套落点属口径错位。lizard 的嵌套计数才与正文「嵌套深度」同义 |
 | 覆盖率 | `gcovr --fail-under={{config:code_quality.coverage.core_business}}` | 核心业务线 |
+| 文件长度 | 无对应 linter | **本适配器不提供该门禁**：非 Python 栈没有与正文「有效代码行」口径一致的成熟工具（同 Go / Rust）。**禁止用行宽类规则凑**——那是单行字符宽度，与文件行数无关 |
 
 - **规模类在本包为「观察」**（见 code-quality §1 动作分级）→ C 侧同样只作观察，**不阻断** ✓
 - **不自己定数值**：先沿用通用出厂阈值；**只有真实项目数据证明"同一数字在 C 下判错了"**，才按语言覆盖（并在 version-boundaries 记录理由）✓
