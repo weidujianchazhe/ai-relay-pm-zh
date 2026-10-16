@@ -29,12 +29,12 @@ compatibility: "需要本地文件系统与命令执行能力。纯对话、网�
      **可单独使用**：只存在一个 MAP 也能回答「项目在哪、代码在哪、按什么规则运转」。
 ③ **写代码的规矩** —— 一屏速查卡 `references/cheatsheet.md`；细则两本：**判据**（有阈值、可机检）`references/code-quality.md`，**风格与工作方式**（靠人读）`references/code-style.md`。 **非 Python 项目先读该规范 §0.2 适用范围。** **鼓励用算法（上限侧）见该规范 §0.4。**
      **不先知道，写出来的代码会被门禁拦下——那是返工，不是审查。**
-③.5 **多语言工程（C / C++ / Python）** —— `references/language-adapters.md`：语言适配层、取数探针契约、能力接口（INSPECT / BUILD / TEST / AUDIT / VERIFY）与工程模型；**核心流程不含语言分支**。
-③.6 **版本与架构边界** —— `references/version-boundaries.md`：v2.3.1（稳定线）↔ v3.x（演进线）的关系、**不能反向覆盖的清单**、**`TBD` 的正式含义**、下一版本的进入条件（**v3.x 迭代前必读**）。
-③.7 **多语言质量适配（方案）** —— `references/language-quality-adaptation-plan.md`：**识别级 / 测量级 / 适配级**三级口径、**L0–L10 晋升门槛**、七语言 Provider 与特有风险、统一证据模型。**未适配的语言一律 TBD，不得因持有文档或能跑工具而晋升。**
-③.8 **多语言质量门禁数据方案** —— `references/multi-language-quality-gate-data-schema.md`：**六质量域**（正确性/安全/可维护性/结构/测试/证据）、**统一 Finding Schema**、八语言矩阵、Severity 分级、**Evidence/Exception**（**`GRAY` 绝不得自动变 `GREEN`**）。
-③.9 **质量基准怎么定（外部先验 + 项目校准）** —— `references/quality-baseline-design.md`：外部先验只决定**「什么值得测」**，真实样本才决定**「阈值在哪里」**；**证据等级 E0–E6**（**E0/E1 不得阻断**）· 规则分类 A/B/C · 基准数据集与 **TP/FP/FN/TN → FPR/DR** 统计。
-③.10 **实测证据（不改语义）** —— `references/empirical-evidence/`（证据层：规则能力对比 · T5 三阶段标注 · 尺度 vs 结构 · 已知缺陷集召回矩阵）· `references/self-gate-debt.md`（本包技术债登记）。· `provider-gates.md`（**可执行门禁的接入契约与质量规范总表**：29 条档案）。**逐文件清单见 MANIFEST §2；入口只保留目录指针 —— 证据文件不再逐个枚举，避免入口成本随证据增长。**
+③.5 **多语言工程** —— `references/language-adapters.md`：适配层 / 取数探针契约 / 能力接口（INSPECT·BUILD·TEST·AUDIT）
+③.6 **版本与架构边界** —— `references/version-boundaries.md`：双线关系 / 不可反向覆盖 / `TBD` 含义 / 下一版准入
+③.7 **多语言质量适配（方案）** —— `references/language-quality-adaptation-plan.md`：三级口径 / L0–L10 晋升门槛
+③.8 **质量门禁数据方案** —— `references/multi-language-quality-gate-data-schema.md`：六质量域 / 统一 Finding
+③.9 **质量基准怎么定** —— `references/quality-baseline-design.md`：外部先验定「测什么」· 样本定「阈值在哪」
+③.10 **实测证据（不改语义）** —— `references/empirical-evidence/` · `references/self-gate-debt.md` · `references/concurrency-internals.md` · `references/provider-gates.md`
 ④ **门禁怎么跑** —— 固定命令见 `references/cheatsheet.md` 末尾。
      门禁由「跑脚本看退出码」给出，不由「读文档判断」给出。
 ```
