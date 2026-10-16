@@ -176,7 +176,7 @@
 - [ ] 文件已就地：`SKILL.md` `MANIFEST.md` `config.yml` `MAP.md` `STATE.md` `REVIEWS.md` `INDEX.md`
 - [ ] `references/` 与 `scripts/` 已原样复制（**逐字副本，不得改写**）
 - [ ] `scripts/local/` 已创建（**项目自定义脚本目录，技能包升级不覆盖**）
-- [ ] `archives/INDEX_archived.md` 已建（冷区，首次归档前为空表）
+- [ ] `archives/INDEX_archived.md` 已建（冷区）——**从 `templates/archives/INDEX_ARCHIVED.template.md` 实例化**，是**带表头的空表**而非空文件；`index-add` / `check_index` 按表结构解析，缺「编号」表头会被判「冷区表结构无法解析」而拒绝写入
 - [ ] `MAP.md` 占位符已全部替换（**含 [技能源包路径]、[备份方式]、[裁决者]**）
   - **必填**：技能源包路径 · 管理区位置 · 裁决者；**可留待用时填**：项目根路径 · 技术栈 · 平台 · Shell · 备份方式（`overview.py` 会把未填的占位符**如实显示**出来）
 - [ ] `MAP.md` 规则段已确认：索引热区行数 / 字数上限 / reports 归档阈值 / 定期排查开关 / 协作模式

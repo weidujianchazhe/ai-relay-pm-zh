@@ -27,9 +27,19 @@ jobs:
         with:
           python-version: "3.11"
       - name: 门禁变异自检（先证明门禁是活的）
-        run: python scripts/selftest_gates.py
+        run: python -B scripts/selftest_gates.py
       - name: 全盘核查（编排全部门禁 + 留痕）
-        run: python scripts/audit_all.py .
+        run: |
+          set -e
+          WS=$(mktemp -d)/ws
+          mkdir -p "$WS"/{tasks,reports,archives/done,designs,scripts,src}
+          cp templates/MAP.template.md "$WS/MAP.md"
+          cp templates/STATE.template.md "$WS/STATE.md"
+          cp templates/REVIEWS.template.md "$WS/REVIEWS.md"
+          cp templates/INDEX.template.md "$WS/INDEX.md"
+          cp templates/archives/INDEX_ARCHIVED.template.md "$WS/archives/INDEX_archived.md"
+          cp SKILL.md "$WS/SKILL.md"
+          python -B scripts/audit_all.py "$WS"
 
   # ── 前端 / Node 栈 ──────────────────────────────────────────
   node-gates:
@@ -76,7 +86,7 @@ jobs:
           python-version: "3.11"
       - name: 包内度量（三档阈值 / 豁免 / 依赖方向 / 扫描覆盖）
         if: ${{ vars.SOURCE_ROOT != '' }}
-        run: python scripts/code_metrics.py "${{ vars.SOURCE_ROOT }}" --ws=.
+        run: python -B scripts/code_metrics.py "${{ vars.SOURCE_ROOT }}" --ws=.
   # ── 汇总留痕：把各栈结果归一成一行，写进元数据通道 ──────────
   #    这是「统一输出契约」+「接没接上可查」的落点：不管各工具输出长什么样，
   #    这里只留**退出码 + 一行摘要**；lang_gates.py check 核这行痕迹是否新鲜。
@@ -98,12 +108,16 @@ jobs:
           rc() { case "$1" in success) echo 0;; skipped) echo -1;; *) echo 1;; esac; }
           # 带上**证据来源**：check 只能证明「有一条记录」，加上来源/流水号/提交号后，
           # 伪造的成本才真正提高（至少要对得上一次真实的 CI 运行）——见 references/audit.md §2.3。
-          python scripts/lang_gates.py . record \
+          python -B scripts/lang_gates.py . record \
             --results "workspace=$(rc "$WS_RC"),node=$(rc "$NODE_RC"),java=$(rc "$JAVA_RC")" \
             --summary "多语言门禁：各栈退出码已归一（-1 = 未运行）" \
             --source "github-actions" \
             --run "${{ github.run_id }}" \
             --commit "${{ github.sha }}"
-      # 本作业只负责留痕；红由 record 的内容体现（check 只是自核）
+      # 本作业负责留痕 + 自核：**record 决定"有没有痕迹"，check 决定"痕迹是否新鲜 / 是否假账"**。
+      #  ★ 2026-10-16 修（第四次外部审查指出）：原命令写作 `check || true`，与步骤名「非零即真红」**自相矛盾**，
+      #  且它吞掉的**全是真红**（lang_gates.py 的三条 problem：开关开却没留痕＝假账 / 痕迹已超期 / 上次非零），
+      #  **没有一条是「仅待核」**。实测：**未启用多语言门禁（开关＝关）时 check 本就 exit 0**，
+      #  故去掉 `|| true` **零误伤**——它只会让"开了却没跑"这类假账真正变红。
       - name: 自核（痕迹新鲜度 · 非零即真红）
-        run: python scripts/lang_gates.py . check || true
+        run: python -B scripts/lang_gates.py . check

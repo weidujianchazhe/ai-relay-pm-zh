@@ -107,7 +107,10 @@ archives/         归档说明
      实例化：config/defaults.yml → config.yml、templates/*.template.md → 去掉 .template
      原样复制：SKILL.md、MANIFEST.md、references/（协议正文）、scripts/（脚本）、
                archives/README.md、tools/README.md
-     创建空目录：tasks/ reports/ archives/done/ archives/INDEX_archived.md
+     实例化冷区：templates/archives/INDEX_ARCHIVED.template.md → archives/INDEX_archived.md
+               （**必须带表头**：index-add / check_index 按表结构解析，建成空文件会被判
+                 「冷区表结构无法解析」而拒绝写入；表头之上不得插入示例行，会被当成真实索引行）
+     创建空目录：tasks/ reports/ archives/done/
 ③ 填 MAP：替换占位符 + 确认规则段配置
      （索引热区行数 / STATE 字数上限 / reports 归档阈值 / 定期排查开关 / 协作模式）
 ④ 登记第一条任务卡（tasks/，按工作命名）

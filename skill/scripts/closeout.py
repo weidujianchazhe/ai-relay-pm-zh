@@ -10,7 +10,9 @@
     python closeout.py <管理区> reviews-archive [--keep N] [--dry-run]
     python closeout.py <管理区> design-archive "<设计卡名>" [--dry-run]
     python closeout.py <管理区> claim   "<卡名>" --ai <标识> [--minutes N] [--steal "<理由>"]
-    python closeout.py <管理区> release "<卡名>" --ai <标识> [--force]
+    python closeout.py <管理区> release "<卡名>" --ai <标识> [--force] [--accept-drift]
+    python closeout.py <管理区> card-update "<卡名>" --ai <标识> --field <字段> --value <值> [--token N]
+                        # 锁内改卡业务字段 + 同步刷新哈希/revision（替代越界手改；快捷参数 --status/--next/--anchor/--handover）
     python closeout.py <管理区> repair [--dry-run]   # 半事务补偿（可重放、幂等）
 
 为什么要有这个脚本：
@@ -41,8 +43,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
-    branch_pattern, config, index_rows, iter_cards, iter_reports, note, ok, problem, read, run,
-    summary, tbd, usage_exit,  # noqa: E402
+    branch_pattern, branch_split, config, index_header_at, index_rows, iter_cards, iter_reports,
+    note, ok, problem, read, run, summary, tbd, usage_exit,  # noqa: E402
 )
 import lease  # noqa: E402  —— 任务租约与 CAS 原语（并发强制层，见 references/concurrency.md）
 
@@ -130,7 +132,9 @@ def _cas_write(root: Path, path: Path, text: str, expected: str, what: str) -> b
 def _split_index(txt: str):
     """→ (前段, 表头行, 分隔行, [数据行], 后段)。表结构保持原样，只动数据行。"""
     lines = (txt or "").splitlines()
-    head = next((i for i, l in enumerate(lines) if l.strip().startswith("|") and "编号" in l), None)
+    #  表头判据收拢到 _common.index_header_at —— 写侧（本函数）与校验侧（check_index）
+    #  共用同一条路径，避免「写侧认表头、校验侧不认」的口径漂移（见 _common.index_header_at 注释）。
+    head = index_header_at(txt)
     if head is None or head + 1 >= len(lines):
         return None
     sep = head + 1
@@ -148,7 +152,10 @@ def _row_id(line: str, root=None):
 
 def _sort_key(row_id: str, root=None):
     m = _id_re(root).match(row_id)
-    return (m.group(1), int(m.group(2))) if m else ("ZZ", 0)
+    if not m:
+        return ("ZZ", 0)
+    br, num = branch_split(m.group(1), root)
+    return (br, int(num)) if num.isdigit() else ("ZZ", 0)
 
 
 def cmd_index_add(root: Path, a) -> int:
@@ -172,14 +179,16 @@ def cmd_index_add(root: Path, a) -> int:
                 return summary()
 
     # 同分支严格递增（按数值）
-    branch, num = _id_re(root).match(a.id).groups()
+    branch, num = branch_split(_id_re(root).match(a.id).group(1), root)
     mx = 0
     for p in (idx, cold):
         for cells, _ in index_rows(p):
             m = _id_re(root).match(cells[0])
-            if m and m.group(1) == branch:
-                mx = max(mx, int(m.group(2)))
-    if int(num) <= mx:
+            if m:
+                _br, _num = branch_split(m.group(1), root)
+                if _br == branch and _num.isdigit():
+                    mx = max(mx, int(_num))
+    if num.isdigit() and int(num) <= mx:
         problem("同分支编号未递增：%s 的当前最大值为 %s%04d" % (a.id, branch, mx))
         return summary()
 
@@ -270,6 +279,69 @@ def _card_fields(card: Path) -> dict:
         if items:
             out["要点"] = items[0]
     return out
+
+
+#: 人读区「状态：X · 下一步：Y」行（在 ━━━ 块内，行首无 `- **`，与字段行可区分）
+HUMAN_STATUS_RE = re.compile(r"^状态：.*?·\s*下一步：.*$", re.M)
+#: card-update 不可改的字段——身份 ID 与租约字段由 claim/release 专管，绕过它们会破坏冻结区与并发元数据
+CARD_UPDATE_FORBIDDEN = {"TASK-ID", "DESIGN-ID", "EVENT-ID", "承接", "并发元数据"}
+#: card-update 允许改的单行业务字段（要点走「要点①」特殊处理，不在此列）
+CARD_UPDATE_FIELDS = ("状态", "描述", "代码根路径", "涉及", "进度锚点",
+                      "上次交接", "已提炼", "设计偏离", "派发摘录", "验收状态")
+
+
+def _fields_from_text(txt: str) -> dict:
+    """从卡文本取 `- **字段**：值` 字典（`_card_fields` 的纯文本版，供 mutate 在锁内文本上用）。"""
+    out = {}
+    for m in CARD_LINE_RE.finditer(txt or ""):
+        k = m.group(1).strip()
+        if k not in out:
+            out[k] = m.group(2).strip()
+    return out
+
+
+def _set_field_line(txt: str, field: str, value: str):
+    """改写单行字段 `- **field**：…` 的值。字段不存在返回 None（调用方据此拒绝，不静默新增）。"""
+    pat = re.compile(r"^(-\s*\*\*" + re.escape(field) + r"\*\*\s*[：:]\s*).*$", re.M)
+    if not pat.search(txt):
+        return None
+    return pat.sub(lambda m: m.group(1) + value, txt, count=1)
+
+
+def _set_first_item(txt: str, value: str):
+    """改写「要点」的第一条缩进项（① 行）。要点块不存在返回 None。"""
+    m = CARD_ITEMS_RE.search(txt)
+    if not m:
+        return None
+    lines = m.group(1).split("\n")
+    idx = next((i for i, l in enumerate(lines) if l.strip()), None)
+    if idx is None:
+        return None
+    indent = re.match(r"^[ \t]*", lines[idx]).group(0)
+    lines[idx] = "%s- ① %s" % (indent, value)
+    return txt[:m.start(1)] + "\n".join(lines) + txt[m.end(1):]
+
+
+def _derive_human_status(txt: str) -> str:
+    """机械派生人读区「状态：X · 下一步：Y」——依据 `_render_task_card` 尾注：
+    状态行 ← 状态字段 · 下一步 ← 要点①。**不新增语义，只从 AI 区已有值重算**（写路径恒定，§A.4）。"""
+    fields = _fields_from_text(txt)
+    status = (fields.get("状态", "") or "—").strip() or "—"
+    nxt = "—"
+    m = CARD_ITEMS_RE.search(txt)
+    if m:
+        items = [re.sub(r"^[ \t]+[-*]\s*", "", l).strip() for l in m.group(1).splitlines()]
+        items = [re.sub(r"^[①②③④⑤]\s*", "", i).strip() for i in items if i and i not in ("—", "-")]
+        if items:
+            nxt = items[0] or "—"
+    return "状态：%s · 下一步：%s" % (status, nxt)
+
+
+def _resync_human_status(txt: str) -> str:
+    """按机械派生结果重写人读区状态行；卡无人读区（旧格式）则原样返回。"""
+    if not HUMAN_STATUS_RE.search(txt):
+        return txt
+    return HUMAN_STATUS_RE.sub(lambda _m: _derive_human_status(txt), txt, count=1)
 
 
 def _card_prefill(root: Path, card_name: str):
@@ -601,8 +673,81 @@ def cmd_release(root: Path, a) -> int:
     if card is None:
         problem("任务卡不存在：tasks/%s" % a.name)
         return summary()
-    okk, why = lease.release(root, card, a.ai, a.force)
+    okk, why = lease.release(root, card, a.ai, a.force, getattr(a, "accept_drift", False))
     (ok if okk else problem)(why)
+    if not okk and "哈希不一致" in why:
+        note("漂移未处置时 release 会拒绝——它重算哈希，否则就把越界改动洗白了。")
+        note("合规改字段用：closeout.py %s card-update %s --field 上次交接 --value reports/xxx.md --ai %s"
+             % (root, a.name, a.ai))
+        note("确属可信的越界改动要认领：release … --accept-drift（会在 CONFLICT 文件留痕）。")
+    return summary()
+
+
+def cmd_card_update(root: Path, a) -> int:
+    """**锁内改任务卡业务字段**并同步刷新哈希 / revision（替代越界手改 → 触发漂移 → release 洗白）。
+
+    协议依据：references/workflow.md §3.1（进度锚点写回）· §3.2（要点/已提炼写回）· §4（原地更新任务卡）。
+    此前这些「写回卡」动作**没有对应端点**，只能手改 → 必触发漂移。本命令补上合规通道。
+    """
+    if not a.ai:
+        problem("需要 --ai <标识>（由 scripts/stamp.py --ai-id 产生；**不得自报姓名**）")
+        return summary()
+    card = _find_card(root, a.name)
+    if card is None:
+        problem("任务卡不存在：tasks/%s" % a.name)
+        return summary()
+    if bool(a.field) != bool(a.value is not None):
+        problem("--field 与 --value 必须成对给（改单行业务字段）")
+        return summary()
+    edits = {}
+    if a.field:
+        if a.field in CARD_UPDATE_FORBIDDEN:
+            problem("字段「%s」不可由 card-update 改（身份 ID / 承接 / 并发元数据 由 claim/release 专管）" % a.field)
+            return summary()
+        if a.field not in CARD_UPDATE_FIELDS and a.field != "要点":
+            problem("不支持的字段「%s」。可改：%s（要点用 --field 要点）"
+                    % (a.field, " / ".join(CARD_UPDATE_FIELDS)))
+            return summary()
+        edits[a.field] = a.value
+    if getattr(a, "status", ""):
+        edits["状态"] = a.status
+    if getattr(a, "next", ""):
+        edits["要点"] = a.next
+    if getattr(a, "anchor", ""):
+        edits["进度锚点"] = a.anchor
+    if getattr(a, "handover", ""):
+        edits["上次交接"] = a.handover
+    if not edits:
+        problem("没有要改的字段（给 --field/--value，或 --status/--next/--anchor/--handover 之一）")
+        return summary()
+
+    #  字段是否都存在，先在**锁外**探一次给出友好报错；最终以 mutate 在锁内文本上的结果为准
+    cur = read(card) or ""
+    for f in edits:
+        if f == "要点":
+            if not CARD_ITEMS_RE.search(cur):
+                problem("卡里没有「要点」块，无法写要点①：%s" % card.name)
+                return summary()
+        elif _set_field_line(cur, f, "x") is None:
+            problem("卡里没有字段「%s」（不静默新增——字段名以 templates/tasks/TASK_CARD.template.md 为准）" % f)
+            return summary()
+
+    def mutate(txt):
+        new = txt
+        for f, v in edits.items():
+            if f == "要点":
+                r = _set_first_item(new, v)
+            else:
+                r = _set_field_line(new, f, v)
+            if r is None:
+                return None          # 锁内重读发现字段没了 → 放弃（update_card 报失败，不半成品）
+            new = r
+        return _resync_human_status(new)   # 人读区机械派生：状态行 ← 状态字段 · 下一步 ← 要点①
+
+    okk, why = lease.update_card(root, card, a.ai, mutate, getattr(a, "token", None))
+    (ok if okk else problem)(why)
+    if okk:
+        note("已同步刷新 NORMALIZED-SHA256 与 revision；人读区「状态 / 下一步」按机械派生重写。")
     return summary()
 
 def cmd_new_card(root: Path, a) -> int:
@@ -637,7 +782,20 @@ def cmd_new_card(root: Path, a) -> int:
             problem("同名设计卡已存在（或无法创建），不覆盖：designs/%s.md" % safe)
             return summary()
         if not _create_new(bp, _render_blueprint(name, mode, a.date, ds_id)):
-            note("蓝图未创建（同名已存在）：designs/%s.blueprint.html" % safe)
+            #  ★ 2026-10-16 P1：蓝图没建成 = **两件套没建成**，绝不可报成功 ✗。
+            #  为什么不能只 note：同名蓝图会保留**旧的 DESIGN-ID**，而详述是**新的 DESIGN-ID** ——
+            #  两件套 ID 不一致，而 `validate_workspace` 只查「配套文件存在」不看 ID，会一路 exit 0（静默污染设计区）。
+            #  此处按「未建成」处置：报 [问题] 并不再输出成功行；同名且 ID 一致的情况由用户自行决定是否用新名重试。
+            #  ★ 保持不变量「一份设计＝两件套」：蓝图没建成就把**刚建的详述回滚**，不留半成品。
+            #  （回滚的是**本次调用内刚创建**的文件，不是别人的资产——安全。）
+            try:
+                dest.unlink()
+                rolled = "已回滚详述"
+            except OSError:
+                rolled = "详述回滚失败，请手工删除"
+            problem("蓝图未创建（同名已存在，或无法创建）：designs/%s.blueprint.html —— 设计卡两件套未建成（%s；本次详述 DESIGN-ID=%s）。同名蓝图保留的是**旧 DESIGN-ID**，直接沿用会造成两件套 ID 不一致。"
+                    % (safe, rolled, ds_id))
+            return summary()
         ok("已建设计卡：designs/%s.md（详述）+ designs/%s.blueprint.html（蓝图）（状态＝草案）" % (safe, safe))
         note("**先填蓝图**（结构：现状→目标 / 改动点 / 拆分）给用户确认方向；确认后再补详述")
         note("补齐详述的「范围与不变式 / 迁移与回滚 / 验证证据」；定稿后按定稿结论建任务卡（未定稿不生成任务卡）")
@@ -742,15 +900,25 @@ def cmd_design_archive(root: Path, a) -> int:
     if not stem:
         problem("设计卡名不能为空")
         return summary()
+    #  ★ 2026-10-16 修（外部审查「归档器也只查根目录」）：写入端必须与校验端**对称** ——
+    #  校验器已递归支持板块设计 `designs/<模块>/design.md` + `blueprint.html`（design.md §1），
+    #  而归档器此前只认 designs/ 根目录的 `<stem>.md` ⇒ **板块设计能建、不能归档**（且缺完整性约束）。
+    #  现：`--name` 可给「设计卡 stem」或「板块目录名」；板块整体移入 `designs/archives/<模块>/`
+    #  （保留目录名，否则多个模块的 `design.md` 会在归档区互相撞名）。
     src = d / ("%s.md" % stem)
+    _moddir = d / stem
+    _is_board = False
+    if not src.exists() and (_moddir / "design.md").is_file():
+        src = _moddir / "design.md"
+        _is_board = True
     if not src.exists():
         cand = [p for p in d.glob("*.md") if p.stem == stem]
         if not cand:
-            problem("活跃设计区里没有这份设计：designs/%s.md" % stem)
+            problem("活跃设计区里没有这份设计：designs/%s.md（或板块目录 designs/%s/design.md）" % (stem, stem))
             return summary()
         src = cand[0]
         stem = src.stem
-    bp = d / ("%s.blueprint.html" % stem)
+    bp = (src.parent / "blueprint.html") if _is_board else (d / ("%s.blueprint.html" % stem))
     txt = read(src)
     if txt is None:
         problem("设计详述不可读：designs/%s.md" % stem)
@@ -786,20 +954,29 @@ def cmd_design_archive(root: Path, a) -> int:
         return summary()
 
     if not bp.exists():
-        problem("配套蓝图缺失：designs/%s.blueprint.html —— **两份文件必须一起移**，缺一份不算完整设计" % stem)
+        problem("配套蓝图缺失：%s —— **两份文件必须一起移**，缺一份不算完整设计"
+                % (str(bp.relative_to(root)).replace(os.sep, "/")))
         return summary()
-    dst_dir = d / "archives"
+    _rel_src = str(src.relative_to(d)).replace(os.sep, "/")
+    _rel_dst = ("archives/%s/" % stem) if _is_board else "archives/"
+    dst_dir = d / "archives" / (stem if _is_board else "")
     if a.dry_run:
-        ok("预览：designs/%s.md + designs/%s.blueprint.html → designs/archives/" % (stem, stem))
+        ok("预览：designs/%s → designs/%s（两份一起移）" % (_rel_src, _rel_dst))
         return summary()
     for p in (src, bp):
         if (dst_dir / p.name).exists():
-            problem("归档目标已存在，不覆盖：designs/archives/%s" % p.name)
+            problem("归档目标已存在，不覆盖：designs/%s%s" % (_rel_dst, p.name))
             return summary()
     dst_dir.mkdir(parents=True, exist_ok=True)
     for p in (src, bp):
         os.replace(p, dst_dir / p.name)
-    ok("已归档设计：designs/%s{.md, .blueprint.html} → designs/archives/（两份一起移，**未删除**）" % stem)
+    #  板块目录移空后清掉空壳，避免 designs/ 下留一个空模块目录（校验器会把它当"空板块"）
+    if _is_board:
+        try:
+            _moddir.rmdir()
+        except OSError:
+            pass
+    ok("已归档设计：designs/%s → designs/%s（两份一起移，**未删除**）" % (_rel_src, _rel_dst))
     note("设计卡不进 INDEX / 不动快照 —— 设计区的进出不产生索引维护成本")
     return summary()
 
@@ -823,7 +1000,8 @@ ENDPOINTS = {
     "reviews-archive":("REVIEWS 溢出滚动归档（只增不删）", "否", "CAS（冷区 + 热区各一次）", "切点非条目边界则拒", "best-effort"),
     "design-archive": ("设计卡归档（详述 + 蓝图一起移）", "否", "触发条件校验（拆完 / 作废）", "条件不成立即拒", "best-effort"),
     "claim":          ("认领任务（写 owner + 租约 + 到期 + fencing）", "否（重复 claim = 续约，令牌自增）", "租约 + 漂移检测 + CAS", "他人持有效租约即拒；--steal 需理由", "atomic"),
-    "release":        ("释放租约（保留「承接」）", "是", "租约归属校验 + CAS", "非持有者即拒（--force 留痕）", "atomic"),
+    "release":        ("释放租约（保留「承接」）", "是", "租约归属校验 + CAS", "非持有者即拒（--force 留痕）；**卡漂移即拒，需 --accept-drift 留痕认领**", "atomic"),
+    "card-update":    ("锁内改卡业务字段 + 同步刷新哈希/revision", "**是**（改成同值报「未变化，未写盘」）", "**锁内**漂移检测 + 租约守卫（--ai）＋ fencing（--token）", "字段不存在即拒（不静默新增）；他人持有效租约即拒；卡漂移即拒", "atomic"),
     "repair":         ("半事务补偿：索引冷热 / 指向 / 崩溃残留", "**是**（跑第二遍报无需修复）", "CAS（每处写入前比对）", "CAS 冲突即停并留痕", "best-effort"),
     "api":            ("打印本表（只读，视图）", "是", "—", "恒退出 0", "read-only"),
 }
@@ -1015,6 +1193,21 @@ def build_parser():
     p9.add_argument("name")
     p9.add_argument("--ai", default="")
     p9.add_argument("--force", action="store_true", help="释放他人持有的租约（会留痕）")
+    p9.add_argument("--accept-drift", action="store_true",
+                    help="卡内容已漂移（有人越界手改）时，显式认领这笔改动再释放（会在 CONFLICT 留痕）；"
+                         "不加则 release 拒绝——它重算哈希，否则会把越界改动洗白")
+
+    p10 = sub.add_parser("card-update",
+                         help="锁内改任务卡业务字段并同步刷新哈希/revision（替代越界手改；协议 workflow §3.1/§3.2/§4）")
+    p10.add_argument("name")
+    p10.add_argument("--ai", default="", help="写者标识（stamp.py --ai-id 产生）")
+    p10.add_argument("--field", default="", help="要改的字段名（状态/描述/涉及/进度锚点/上次交接/已提炼/… 或 要点）")
+    p10.add_argument("--value", default=None, help="该字段的新值（与 --field 成对；给空串即清空为「—」由调用方决定）")
+    p10.add_argument("--status", default="", help="快捷：改「状态」字段（等价 --field 状态 --value …）")
+    p10.add_argument("--next", default="", help="快捷：改「要点①」（等价 --field 要点 --value …）")
+    p10.add_argument("--anchor", default="", help="快捷：改「进度锚点」（等价 --field 进度锚点 --value …）")
+    p10.add_argument("--handover", default="", help="快捷：改「上次交接」裸路径（等价 --field 上次交接 --value …）")
+    p10.add_argument("--token", default=None, help="fencing 令牌（认领时回显）；给了则严格校验，防过期写者")
 
     p7 = sub.add_parser("design-archive", help="走完流程的设计卡移入 designs/archives/（详述+蓝图一起移）")
     p7.add_argument("name")
@@ -1037,7 +1230,7 @@ def main() -> int:
             "archive-reports": cmd_archive_reports, "card-archive": cmd_card_archive,
             "new-card": cmd_new_card, "reviews-archive": cmd_reviews_archive,
             "design-archive": cmd_design_archive,
-            "claim": cmd_claim, "release": cmd_release,
+            "claim": cmd_claim, "release": cmd_release, "card-update": cmd_card_update,
             "repair": cmd_repair}[a.cmd](root, a)
 
 

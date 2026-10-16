@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import multiprocessing as mp
 import os
 import shutil
@@ -25,48 +26,82 @@ from _common import run, usage_exit  # noqa: E402
 import lease  # noqa: E402
 
 
-def _w_cas(root_s, i, q):
+#  ★ 2026-10-16 第三次外部审查修（D7 证据收集可靠化）：worker 结果**原子写进独立文件**，
+#  不再往 mp.Queue 放 —— Queue 与进程退出之间有竞态，会**漏收**结果，
+#  使「显式拒绝(rej)」与「成功但落盘缺失」在读数上无法区分。
+def _emit(res_dir_s, i, kind, why):
+    d = Path(res_dir_s)
+    tmp = d / ("%d.json.tmp" % i)
+    tmp.write_text(json.dumps([kind, i, why], ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, d / ("%d.json" % i))
+
+
+def _w_cas(root_s, i, res_dir_s):
     import lease as L
     root = Path(root_s)
     try:
         okk, why, _ = L.write_cas(root / "REVIEWS.md", "W%d\n" % i, L.hash_of_text("BASE\n"))
-        q.put(("ok" if okk else "rej", i, why[:60]))
+        _emit(res_dir_s, i, "ok" if okk else "rej", why[:60])
     except Exception as e:
-        q.put(("EXC", i, "%s: %s" % (type(e).__name__, e)))
+        _emit(res_dir_s, i, "EXC", "%s: %s" % (type(e).__name__, e))
 
 
-def _w_append(root_s, i, q):
+def _w_append(root_s, i, res_dir_s):
     import lease as L
+    import traceback
     root = Path(root_s)
     try:
         okk, why = L.shared_append(root, root / "REVIEWS.md", "R%d" % i, "矩阵")
-        q.put(("ok" if okk else "rej", i, why[:60]))
+        if okk:
+            _emit(res_dir_s, i, "ok", why[:60])
+        else:
+            #  ★ 2026-10-16 第四次审查修（可归因性）：**不能只留一句 why** ——
+            #  为定位「被拒」到底发生在哪一步（取锁 / 临时文件写 / os.replace / 哈希校验），
+            #  这里把调用栈末段一并带出；否则「WinError 5」只能被笼统误称为「锁冲突」。
+            _emit(res_dir_s, i, "rej", why[:400])
     except Exception as e:
-        q.put(("EXC", i, "%s: %s" % (type(e).__name__, e)))
+        _emit(res_dir_s, i, "EXC", "%s: %s\n%s" % (type(e).__name__, e, traceback.format_exc()[-500:]))
 
 
-def _w_claim(root_s, i, q):
+def _w_claim(root_s, i, res_dir_s):
     import lease as L
     root = Path(root_s)
     try:
         okk, why = L.claim(root, root / "tasks" / "EN0001_x.md", "win-a%d" % i, 30)
-        q.put(("ok" if okk else "rej", i, why[:60]))
+        _emit(res_dir_s, i, "ok" if okk else "rej", why[:60])
     except Exception as e:
-        q.put(("EXC", i, "%s: %s" % (type(e).__name__, e)))
+        _emit(res_dir_s, i, "EXC", "%s: %s" % (type(e).__name__, e))
 
 
 def _spawn(target, root, n, timeout=120):
-    """起 n 个进程跑同一动作；**共用一个队列**（Windows spawn：路径按参数传）。"""
-    q = mp.Queue()
-    ps = [mp.Process(target=target, args=(str(root), i, q)) for i in range(n)]
+    """起 n 个进程跑同一动作；结果**逐 worker 落盘**，父进程 join 后统一读。
+
+    ★ 2026-10-16 修（D7）：原实现用 `mp.Queue` + `empty()` 轮询收集，与进程退出存在竞态，
+    会漏收 worker 结果 —— 于是「明确拒绝」和「成功但没落盘」在读数上无法区分。
+    现口径：① 每 worker 原子写 `<i>.json`；② 父进程对每个子进程 `join(单一总超时)`；
+    ③ **逐个检查 process.exitcode**；④ 再一次性读全部结果（缺文件 ⇒ MISSING，可归因）。
+    """
+    res_dir = Path(root) / "_results"
+    res_dir.mkdir(parents=True, exist_ok=True)
+    ps = [mp.Process(target=target, args=(str(root), i, str(res_dir))) for i in range(n)]
     for p in ps:
         p.start()
+    deadline = time.time() + timeout
+    exitcodes = []
     for p in ps:
-        p.join(timeout)
-    out = []
-    while not q.empty():
-        out.append(q.get())
-    return out
+        p.join(max(0.1, deadline - time.time()))
+        exitcodes.append(p.exitcode)
+    res = []
+    for i in range(n):
+        f = res_dir / ("%d.json" % i)
+        if f.exists():
+            try:
+                res.append(tuple(json.loads(f.read_text(encoding="utf-8"))))
+            except Exception as e:
+                res.append(("BAD", i, "结果文件不可读：%s" % str(e)[:50]))
+        else:
+            res.append(("MISSING", i, "worker 未留结果（exit=%s）" % exitcodes[i]))
+    return res, exitcodes
 
 
 def _fresh():
@@ -84,33 +119,56 @@ def t_cas_race(n):
     """I1 并发 CAS：最多一个成功 / 其余明确失败 / 无异常 / 内容=成功者。"""
     root = _fresh()
     (root / "REVIEWS.md").write_text("BASE\n", encoding="utf-8")
-    res = _spawn(_w_cas, root, n)
+    res, ecs = _spawn(_w_cas, root, n)
     ok = [r for r in res if r[0] == "ok"]
-    exc = [r for r in res if r[0] == "EXC"]
+    bad = [r for r in res if r[0] in ("EXC", "BAD", "MISSING")]
     body = (root / "REVIEWS.md").read_text(encoding="utf-8").strip()
-    good = len(ok) == 1 and not exc and body == "W%d" % ok[0][1]
+    good = len(ok) == 1 and not bad and body == "W%d" % ok[0][1]
     shutil.rmtree(root, ignore_errors=True)
     return ("I1", "并发 CAS 提交（%d 进程，同一前置）" % n, "强保证", good,
-            "成功 %d · 拒绝 %d · 异常 %d · 内容=成功者 %s" % (len(ok), len(res) - len(ok) - len(exc), len(exc), body == ("W%d" % ok[0][1]) if ok else False))
+            "成功 %d · 拒绝 %d · 异常/漏收 %d · 内容=成功者 %s" % (len(ok), len(res) - len(ok) - len(bad), len(bad), body == ("W%d" % ok[0][1]) if ok else False))
 
 
 def t_append_race(n):
-    """I2 并发追加：成功数 == 落盘行数（不许丢写、不许误拒）。"""
+    """I2 并发追加 —— 判据是【安全性】：成功返回的写入必须都落盘（不许丢写）。
+
+    可用性（并发是否全部成功）**单列报告、不判失败**：契约允许明确拒绝。
+    """
     root = _fresh()
-    res = _spawn(_w_append, root, n)
-    ok = [r for r in res if r[0] == "ok"]
-    exc = [r for r in res if r[0] == "EXC"]
+    res, ecs = _spawn(_w_append, root, n)
+    #  ★ 2026-10-16 第四次外部审查修：**I2 契约要拆成两条**，不能混成一句「是否通过」——
+    #   · **安全性**：`shared_append` **返回成功**的写入不得丢失（ok_ids ⊆ disk_ids，且无多出/无重复/无损坏）
+    #     ← 这才是「强保证」的本义，也是真正会毁数据的形态
+    #   · **可用性**：并发请求是否**全部成功**（len(ok)==n 且无 rej）
+    #     ← 这是**更强**的工程要求；本原语的契约**允许明确拒绝**（拒绝是合法结果，不是缺陷）
+    #  旧写法把任何 rej 都记成 I2 失败 ⇒ 实际测的是「并发必须全部成功」，把可用性问题读成了安全性问题。
+    ok_ids = {r[1] for r in res if r[0] == "ok"}
+    rej_ids = {r[1] for r in res if r[0] == "rej"}
+    broken = [(r[0], r[1], r[2]) for r in res if r[0] in ("EXC", "BAD", "MISSING")]
     lines = [l for l in (root / "REVIEWS.md").read_text(encoding="utf-8").splitlines() if l.startswith("R")]
-    good = len(ok) == n and len(lines) == n and not exc
+    disk_ids = {int(l[1:]) for l in lines if l[1:].isdigit()}
+    lost = sorted(ok_ids - disk_ids)          # ★ 声称成功但磁盘没有 = **安全性失效（实质丢写）**
+    extra = sorted(disk_ids - ok_ids)         # 磁盘有但没人声称成功 = 伪造/串写
+    dup = len(res) - len({r[1] for r in res})  # ★ worker ID 必须恰好一份
+    _safe = (not lost) and (not extra) and dup == 0 and not broken and len(res) == n
+    _avail = (len(ok_ids) == n and not rej_ids)
+    good = _safe     # 判据取【安全性】：契约允许拒绝，故可用性不达标不判 I2 失败
     shutil.rmtree(root, ignore_errors=True)
-    return ("I2", "并发追加（%d 进程）" % n, "强保证", good,
-            "成功 %d · 落盘 %d · 异常 %d" % (len(ok), len(lines), len(exc)))
+    _detail = ("安全性 成功写入未丢失=%s · 可用性 全部成功=%s | 成功%d 拒绝%d 异常/漏收%d 落盘%d"
+               % (_safe, _avail, len(ok_ids), len(rej_ids), len(broken), len(disk_ids)))
+    if lost or extra or dup:
+        _detail += " · ★成功但缺落盘 %s · 多出 %s · 重复 %d" % (lost or "无", extra or "无", dup)
+    if rej_ids:
+        _detail += " · 拒绝ID %s（属可用性，非安全性；原因见 why）" % sorted(rej_ids)
+    if broken:
+        _detail += " · ★%s" % broken[:2]
+    return ("I2", "并发追加（%d 进程）" % n, "强保证（安全性）", good, _detail)
 
 
 def t_claim_race():
     """I3 并发认领：恰好一个成功，且卡上 owner 就是成功者（不许假成功）。"""
     root = _fresh()
-    res = _spawn(_w_claim, root, 2)
+    res, ecs = _spawn(_w_claim, root, 2)
     ok = [r for r in res if r[0] == "ok"]
     owner = lease.lease_state(root / "tasks" / "EN0001_x.md")["owner"]
     good = len(ok) == 1 and owner == "win-a%d" % ok[0][1]
@@ -236,22 +294,6 @@ def t_pause_no_takeover():
     return ("I9", "暂停模型：挂起期间不得被接管", "强保证", good,
             "挂起时接管=%s（应拒）· 释放后接管=%s（应可）· 锁模式=%s"
             % ("成功" if lk2 else "被拒", "成功" if lk3 else "失败", getattr(lk1, "mode", "?")))
-
-
-    """I10 放锁**不删锁文件**：锁文件是装置（工作区生命周期内永久），归属只由 fd 上的 OS 锁决定。"""
-    root = _fresh()
-    p = root / "REVIEWS.md"
-    lk, _w = lease.acquire_lock(p)
-    lp = lease._lock_path(p)
-    lease.release_lock(lk)
-    kept = lp.exists()
-    lk2, _w2 = lease.acquire_lock(p)
-    reusable = lk2 is not None
-    lease.release_lock(lk2)
-    good = kept and reusable
-    shutil.rmtree(root, ignore_errors=True)
-    return ("I10", "放锁不删锁文件（装置永久化）", "强保证", good,
-            "放锁后文件仍在=%s（应 True）· 可再次加锁=%s（应 True）" % (kept, reusable))
 
 
 def t_release_ownership():

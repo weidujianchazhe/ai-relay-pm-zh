@@ -90,17 +90,80 @@ def _mut_edit(path, old, new):
 
 
 def _mk_spec_only(d):
-    """只写详述、不写蓝图 —— 一份设计＝两件套，缺一份必须报红。"""
+    """只写详述、不写蓝图 —— 一份设计＝两件套，缺一份必须报红。
+
+    ★ 2026-10-16 **第二次外部审查修**：`validate_workspace` 现在以**身份字段**分界——
+    无 `DESIGN-ID` 且无配套蓝图的 .md 按 `design.md §0.2` 当作**设计过程资产放行**；
+    **例外**：板块目录里的 `design.md` 是约定固定名，**必为设计卡**（缺 ID 即报，不能以"过程资产"绕过）。
+    因此本夹具必须**写上 `DESIGN-ID`**，才能真实代表「设计卡缺蓝图」这一故障形态。
+    """
     (d / "designs" / "方案.md").write_text(
-        "# 方案 设计卡\n\n- **状态**：草案\n- **拆分出的任务卡**：—\n", encoding="utf-8")
+        "# 方案 设计卡\n\n- **状态**：草案\n- **DESIGN-ID**：DSN-20260101-CCCCCC\n"
+        '- **拆分出的任务卡**：—\n', encoding="utf-8")
 
 
 def _mk_long_blueprint(d):
     """蓝图里塞一段长散文 —— 详述被搬进蓝图，两份文件开始漂移。"""
+    #  ★ 必须用**真实 HTML**（2026-10-16 外部审查发现）：蓝图载体自 v4.0.0 起是 .html，
+    #  而 `_long_paragraphs` 对 HTML 有专门处理（剥 <style>/<script>/标签）。夹具若写成 Markdown 内容，
+    #  就**绕过了那条路径** —— 「HTML 剥壳写坏了」也不会有人发现（假绿）。
+    #  本夹具因此**双向盯**：① <style> 里的长 CSS **不得**被误报；② 人写的长散文**必须**被抓。
     _mk_spec_only(d)
     (d / "designs" / "方案.blueprint.html").write_text(
-        "# 方案 · 设计蓝图\n\n## 一、现状 → 目标（改什么）\n\n"
-        + "这是一段本该写在详述里、却被搬进蓝图的散文。" * 12 + "\n",
+        #  ★ 用**显式 +** 拼接而非隐式拼接：AST 会把隐式相邻字面量**合并成一个 Constant**，
+        #  那样 `correctness_rules` 的 G1（超长字符串片段）仍会命中（实测 288 字符阻断）。
+        "<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\">\n"
+        + "<style>body{font-family:PingFang SC,Microsoft YaHei,sans-serif;background:#F4F3EE;"
+        + "color:#1A1B1C;line-height:1.7;padding:24px}</style>\n"
+        + "</head><body>\n<h1>方案 · 设计蓝图</h1>\n<h2>一、现状 → 目标（改什么）</h2>\n"
+        "<p>" + "这是一段本该写在详述里、却被搬进蓝图的散文。" * 12 + "</p>\n"
+        "</body></html>\n",
+        encoding="utf-8")
+
+
+def _mk_id_mismatch(d):
+    """两件套 DESIGN-ID 不一致 —— 详述与蓝图指向两个身份（同名蓝图保留旧 ID 被沿用的形态）。
+
+    ★ 2026-10-16 **第二次外部审查修**：本夹具此前调用 `_mk_spec_only()` —— 那份详述**没有 DESIGN-ID、
+    也不建蓝图**，于是该用例实际因「**缺蓝图**」变红，**完全没碰到 ID 一致性检查**（= 假负控：
+    「用例变红」不等于「判据被触发」）。现改为：**建成对的两件套，且两侧 ID 不同**。
+    """
+    p = d / "designs"
+    (p / "方案.md").write_text(
+        "# 方案 设计卡\n\n- **状态**：草案\n- **DESIGN-ID**：DSN-20260101-AAAAAA\n"
+        '- **拆分出的任务卡**：—\n', encoding="utf-8")
+    (p / "方案.blueprint.html").write_text(
+        "<!DOCTYPE html><html><head><style>body{margin:0}</style></head><body>\n"
+        "<div>DESIGN-ID：DSN-20260101-BBBBBB</div></body></html>\n", encoding="utf-8")
+
+
+def _mk_board_missing_bp(d):
+    """板块目录里只有 design.md、缺 blueprint.html —— ② 的假绿形态（只扫根目录时完全不被校验）。"""
+    p = d / "designs" / "模块A"
+    p.mkdir(parents=True, exist_ok=True)
+    (p / "design.md").write_text(
+        "# 板块设计\n\n- **DESIGN-ID**：DSN-20260101-AAAAAA\n\n- **拆分出的任务卡**：—\n", encoding="utf-8")
+
+
+def _mk_half_archive(d):
+    """归档里只有详述、缺蓝图 —— 两件必须一起移；旧判据「.md 数奇偶」抓不到这种半份。"""
+    p = d / "designs" / "archives"
+    p.mkdir(parents=True, exist_ok=True)
+    (p / "旧方案.md").write_text(
+        "# 归档设计\n\n- **DESIGN-ID**：DSN-20260101-BBBBBB\n\n- **拆分出的任务卡**：—\n", encoding="utf-8")
+
+
+def _mk_pair_no_id(d):
+    """两件套但详述**缺 DESIGN-ID** —— 有蓝图说明它是设计卡，却拿不出身份字段。
+
+    ★ 2026-10-16 第二次外部审查的 P1 假绿：旧判据只在**双方都提取到 ID** 时才比较，
+    于是「一方没有 ID」静默通过。现以身份字段分界并双向检查，本夹具锁住该口径。
+    """
+    p = d / "designs"
+    (p / "方案.md").write_text(
+        "# 方案 设计卡\n\n- **状态**：草案\n- **拆分出的任务卡**：—\n", encoding="utf-8")
+    (p / "方案.blueprint.html").write_text(
+        "<!DOCTYPE html><html><head><style>body{margin:0}</style></head><body><h1>x</h1></body></html>\n",
         encoding="utf-8")
 
 
@@ -139,7 +202,7 @@ def _mk_others_lease(d):
 
 def _run(script, *args):
     #  -B：自检跑的是包内脚本，不得在包里留下 .pyc（口径见 scripts/README.md；
-    #      这不是"用有利环境替包打掩护"——gen_views §15 早已不把 __pycache__ 判为残留）
+    #      这不是"用有利环境替包打掩护"——gen_views §15 仍会把 __pycache__ 判为残留，本节的干净 = 运行一律加 -B）
     p = subprocess.run([sys.executable, "-B", str(HERE / script), *args],
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                        timeout=180, check=False)
@@ -184,6 +247,14 @@ def cases():
          _mk_spec_only),
         ("validate_workspace", "蓝图里塞长段落（详述被搬进蓝图）", "validate_workspace.py", ["{r}"],
          _mk_long_blueprint),
+        ("validate_workspace", "两件套 DESIGN-ID 不一致（详述↔蓝图指两个身份）", "validate_workspace.py", ["{r}"],
+         _mk_id_mismatch),
+        ("validate_workspace", "板块设计缺蓝图（designs/模块/design.md 无 blueprint.html）", "validate_workspace.py", ["{r}"],
+         _mk_board_missing_bp),
+        ("validate_workspace", "归档半份（只有详述、缺蓝图）", "validate_workspace.py", ["{r}"],
+         _mk_half_archive),
+        ("validate_workspace", "两件套但详述缺 DESIGN-ID（身份字段缺失）", "validate_workspace.py", ["{r}"],
+         _mk_pair_no_id),
         # 【2026-10-02】规模类（长文件 / 长函数 / 嵌套 / CCN）已降为「观察」不再阻断，
         # 故不再作为"必须变红"的变异用例。此处改为验证**仍然阻断**的非规模类信号：
         # 注释密度超限 · 预警区未说明 · 豁免理由空话。
@@ -225,16 +296,153 @@ def main() -> int:
     ap.add_argument("--only", default="", help="只跑匹配的用例（逗号分隔子串）")
     a = ap.parse_args()
 
-    tmp = Path(tempfile.mkdtemp(prefix="gate_selftest_"))
+    #  否则 `--only 拼错` 会在退出前**留下一个临时夹具目录**（实测残留 gate_selftest_*）。
     todo = cases()
     if a.only:
         want = [x.strip() for x in a.only.split(",") if x.strip()]
         todo = [c for c in todo if any(w in c[0] or w in c[1] for w in want)]
+        if not todo:
+            print("[问题] --only 没有匹配到任何用例：%s" % a.only)
+            print("       可用筛选词示例：validate_workspace / check_index / reconcile / 蓝图 / DESIGN-ID")
+            return 1
+    tmp = Path(tempfile.mkdtemp(prefix="gate_selftest_"))
 
     print("=" * 58)
     print("门禁变异自检 · 逐门禁对射（gate_i 只在故障 f_i 下跑自己）")
     print("=" * 58)
     fails, ran = [], 0
+
+    # ── ★ 正控段（该绿必须绿）──────────────────────────────────────────
+    #  为什么必须有：19 条变异用例**只证明「必须变红」**——若某条命令在**干净夹具上就 exit 3**，
+    #  那不是「门禁变红」，而是「脚本坏了」，变异矩阵会把它**整体放行**。
+    #  2026-10 实测过一次真 P0：index-add 在干净工作区对合法短号 ValueError -> exit 3 -> 19/19 全绿。
+    #  同 references/self-gate-debt.md §5 ⑮「验证方向完整性」：只验红不验绿 = 方向不全。
+    _r = "reports\\2026-09-20_一_win-t.md"
+    pbase = tmp / "t00_posbase"
+    pbase.mkdir(parents=True)
+    build_fixture(pbase)
+    prc, pout = _run("closeout.py", str(pbase), "index-add", "--id", "EN0007", "--type", "[接力]",
+                     "--topic", "正控", "--record", _r, "--ai", "win-t")
+    if prc == 0:
+        print("  [正控通过] index-add 在干净工作区 exit 0 —— 该绿确实会绿 ✓")
+    else:
+        _msg = "正控 / index-add 成功路径：应为 0 实为 %d —— 这不是门禁变红，是命令坏了，而变异矩阵对它是瞎的" % prc
+        fails.append(_msg)
+        print("  [正控失败] index-add exit=%d（应为 0）" % prc)
+        for _ln in pout.splitlines()[-6:]:
+            print("      " + _ln.strip())
+
+    # ★ 正控第二面：**判据还灵不灵**（不是「命令能不能跑」）──────────────────
+    #  夹具预置 EN0050（大号）→ 登记更小的 EN0001 → **必须被「同分支未递增」拒绝（非 0）**。
+    #  为什么必须有：2026-10 的 closeout.py:183 缺陷正是「端点跑通、判据空转」——
+    #  上面那条正控只跑干净工作区（索引空 → 递增循环不执行 → 根本碰不到该判据）。
+    pbase2 = tmp / "t00_posbase2"
+    pbase2.mkdir(parents=True)
+    build_fixture(pbase2)
+    (pbase2 / "INDEX.md").write_text(
+        INDEX_HEAD + "| EN0050 | 2026-09-20 | [接力] | 一 | win-t | reports\\2026-09-20_一_win-t.md |\n",
+        encoding="utf-8")
+    (pbase2 / "archives" / "INDEX_archived.md").write_text(
+        INDEX_HEAD + "| EN0050 | 2026-09-20 | [接力] | 一 | win-t | reports\\2026-09-20_一_win-t.md |\n",
+        encoding="utf-8")
+    irc, iout = _run("closeout.py", str(pbase2), "index-add", "--id", "EN0001", "--type", "[接力]",
+                     "--topic", "正控2", "--record", _r, "--ai", "win-t")
+    if irc != 0:
+        print("  [正控通过] 已有 EN0050 时登记 EN0001 → 被拒（exit %d）—— 递增判据仍在生效 ✓" % irc)
+    else:
+        _msg2 = "正控2 / 同分支递增判据：已有 EN0050 时登记 EN0001 应被拒，实为 exit 0 —— 判据空转（静默失效）"
+        fails.append(_msg2)
+        print("  [正控2失败] 判据空转：EN0001 被接受了")
+        for _ln in iout.splitlines()[-6:]:
+            print("      " + _ln.strip())
+
+    # ★ 正控第三面：**card-update 成功路径**（该绿必须绿）─────────────────
+    #  为什么必须有：card-update 是 2026-10-16 新增端点（补 workflow §3.1/§3.2/§4 的「写回卡」缺口）。
+    #  若它在干净卡上就 exit 3（例如字段定位写错），变异矩阵对「端点根本不可用」是瞎的——同 index-add 那次的教训。
+    pbase3 = tmp / "t00_posbase3"
+    pbase3.mkdir(parents=True)
+    build_fixture(pbase3)
+    _card3 = pbase3 / "tasks" / "EN0002_卡.md"
+    urc, uout = _run("closeout.py", str(pbase3), "card-update", "EN0002_卡.md",
+                     "--ai", "win-t", "--field", "状态", "--value", "已阻塞")
+    _txt3 = _card3.read_text(encoding="utf-8") if _card3.exists() else ""
+    if urc == 0 and "- **状态**：已阻塞" in _txt3:
+        print("  [正控通过] card-update 干净卡改「状态」exit 0 且值已落盘 —— 写回通道可用 ✓")
+    else:
+        _msg3 = "正控3 / card-update 成功路径：应为 0 且字段落盘，实为 exit %d、字段命中 %s —— 端点不可用，变异矩阵对它瞎" % (
+            urc, "- **状态**：已阻塞" in _txt3)
+        fails.append(_msg3)
+        print("  [正控3失败] card-update exit=%d（应为 0）" % urc)
+        for _ln in uout.splitlines()[-6:]:
+            print("      " + _ln.strip())
+
+    # ★ 正控第四面：**漂移态不得被洗白**（该红必须红）──────────────────────
+    #  为什么必须有：2026-10-15 实测的缺陷——越界手改卡触发漂移后，release 无条件重算哈希把改动洗白；
+    #  card-update 若不查漂移同理会把脏内容固化成新哈希。这里同时钉住两个端点的漂移前置检查。
+    pbase4 = tmp / "t00_posbase4"
+    pbase4.mkdir(parents=True)
+    build_fixture(pbase4)
+    _card4 = pbase4 / "tasks" / "EN0002_卡.md"
+    _run("closeout.py", str(pbase4), "claim", "EN0002_卡.md", "--ai", "win-t")   # 建租约（刷新哈希，此刻干净）
+    _mut_edit(_card4, "- **进度锚点**：—", "- **进度锚点**：越界手改")            # 绕过脚本手改 → 制造漂移
+    _st4 = _card4.read_text(encoding="utf-8")
+    crc, _cout = _run("closeout.py", str(pbase4), "card-update", "EN0002_卡.md", "--ai", "win-t",
+                      "--field", "已提炼", "--value", "x")
+    rrc, _rout = _run("closeout.py", str(pbase4), "release", "EN0002_卡.md", "--ai", "win-t")
+    #  判据：两个端点都必须**非 0**（漂移被拦）；且手改内容不得被刷新成「干净哈希」而消失
+    if crc != 0 and rrc != 0:
+        print("  [正控通过] 漂移态 card-update(exit %d) 与 release(exit %d) 均被拒 —— 越界改动不被洗白 ✓" % (crc, rrc))
+    else:
+        _msg4 = "正控4 / 漂移前置：card-update 应非0实为%d，release 应非0实为%d —— 有一者把越界改动洗白了" % (crc, rrc)
+        fails.append(_msg4)
+        print("  [正控4失败] card-update=%d release=%d（均应非 0）" % (crc, rrc))
+        for _ln in (_cout + _rout).splitlines()[-6:]:
+            print("      " + _ln.strip())
+    #  release --accept-drift 必须放行（显式认领是人的判断，不能被误拦）
+    arc, _aout = _run("closeout.py", str(pbase4), "release", "EN0002_卡.md", "--ai", "win-t", "--accept-drift")
+    if arc == 0:
+        print("  [正控通过] release --accept-drift 在漂移态放行（exit 0）—— 显式认领通道未被误拦 ✓")
+    else:
+        fails.append("正控4b / --accept-drift：应放行(0)实为 %d —— 显式认领通道被误拦" % arc)
+        print("  [正控4b失败] release --accept-drift exit=%d（应为 0）" % arc)
+
+    # ★ 正控第六面：**SKELETON 是设计骨架、不是设计卡**（该绿必须绿）──────────────
+    #  为什么必须有：旧校验器把 designs/ 下所有 .md 当设计卡，于是 `SKELETON.md`
+    #  （design.md §0.4：项目当前工程模型）被要求配套 SKELETON.blueprint.html 与「拆分出的任务卡」
+    #  —— **任何建了骨架的项目都会被误报**（2026-10-16 外部审查 P1 假红）。
+    pbase5 = tmp / "t00_posbase5"
+    pbase5.mkdir(parents=True)
+    build_fixture(pbase5)
+    (pbase5 / "designs" / "SKELETON.md").write_text("# 骨架\n", encoding="utf-8")
+    (pbase5 / "designs" / "SKELETON.html").write_text(
+        "<!DOCTYPE html><html><head><style>body{font-family:sans-serif}</style></head>\n"
+        "<body><h1>骨架</h1></body></html>\n", encoding="utf-8")
+    src_s, sout = _run("validate_workspace.py", str(pbase5))
+    if src_s == 0:
+        print("  [正控通过] SKELETON.md+.html 在场 exit 0 —— 骨架未被误当设计卡 ✓")
+    else:
+        fails.append("正控5 / SKELETON 不被误当设计卡：应为 0 实为 %d —— 骨架被当成了设计卡（假红）" % src_s)
+        print("  [正控5失败] SKELETON 在场却 exit=%d" % src_s)
+        for _ln in sout.splitlines()[-6:]:
+            print("      " + _ln.strip())
+
+    # ★ 正控第七面：**设计过程资产必须放行**（该绿必须绿）──────────────────────
+    #  为什么必须有：`design.md §0.2` 明写 `designs/` 根可放**设计过程资产**（中间/局部方案、论证材料），
+    #  它们不是设计卡、天然没有蓝图和「拆分出的任务卡」。旧校验器把除 SKELETON 外每个 .md 都当设计卡 ⇒ 假红。
+    pbase6 = tmp / "t00_posbase6"
+    pbase6.mkdir(parents=True)
+    build_fixture(pbase6)
+    (pbase6 / "designs" / "research-notes.md").write_text(
+        "# 调研笔记\n\n- 方案 A 的取舍\n- 待验证的假设\n", encoding="utf-8")
+    arc, aout = _run("validate_workspace.py", str(pbase6))
+    if arc == 0:
+        print("  [正控通过] 过程资产 research-notes.md 在场 exit 0 —— 未被误当设计卡 ✓")
+    else:
+        fails.append("正控6 / 过程资产放行：应为 0 实为 %d —— 过程笔记被当成设计卡（假红）" % arc)
+        print("  [正控6失败] 过程资产被误报 exit=%d" % arc)
+        for _ln in aout.splitlines()[-6:]:
+            print("      " + _ln.strip())
+
     for gate, desc, script, extra, mutate in todo:
         ran += 1
         try:
@@ -261,8 +469,18 @@ def main() -> int:
                 fails.append("%s / %s：注入故障后退出 **3（脚本/用法错误）**——这是把脚本跑崩了，"
                              "不是门禁抓到问题，不算自证" % (gate, desc))
                 print("  [退出3]    %-18s %s（崩溃不算自证）" % (gate, desc))
+            elif rc == 2:
+                #  旧写法 `else: 已变红` 会把 2 当"门禁抓到了"——于是「把 problem 降级成 tbd」
+                #  这种**抑制阻断而不失自检**的动作永远发现不了（与 1 的区别正是本包注册的退出码四值）。
+                #  判据收紧：**只认阻断码 1**；2 单列报告并判自检失败。
+                fails.append("%s / %s：注入故障后退出 **2（仅待核，不阻断）**——不是阻断码 1；"
+                             "把 problem 降级成 tbd 不得算「门禁抓到了」" % (gate, desc))
+                print("  [仅待核]   %-18s %s（exit=2 · 不算变红）" % (gate, desc))
+            elif rc == 1:
+                print("  [已变红]   %-18s %s（exit=1 阻断）" % (gate, desc))
             else:
-                print("  [已变红]   %-18s %s（exit=%d）" % (gate, desc, rc))
+                fails.append("%s / %s：退出码 %d 不属于约定四值（0/1/2/3）——判据失效，请查夹具" % (gate, desc, rc))
+                print("  [异常码]   %-18s %s（exit=%d 不在 0/1/2/3）" % (gate, desc, rc))
         except Exception as e:
             fails.append("%s / %s：自检自身异常 %s" % (gate, desc, e))
             print("  [自检异常] %-18s %s（%s）" % (gate, desc, e))

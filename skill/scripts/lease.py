@@ -300,11 +300,17 @@ def claim(root: Path, card: Path, ai: str, minutes: int, steal: str = ""):
                       "（后续写入请带 --token %s，否则挡不住过期写者）"
                       % (ai, exp, meta["revision"], meta["fencing"], meta["fencing"]))
 
-def release(root: Path, card: Path, ai: str, force: bool = False):
+def release(root: Path, card: Path, ai: str, force: bool = False, accept_drift: bool = False):
     """释放租约（保留「承接」——认领关系是历史，租约是当下的占用）。
 
     与 `claim` 同一手法：**判归属与改内容必须在同一把锁内**——
     否则「A 释放的同时 B 认领」会让 B 的租约被 A 的写覆盖（check-then-act）。
+
+    **为什么要查漂移（2026-10-15 实测出的缺陷）**：release 必然重算 NORMALIZED-SHA256
+    （它改了「并发元数据」行）。旧实现**无条件**重算，于是「越界手改卡 → release → 哈希被刷新」
+    成了洗白通道：claim 早已查漂移（见本文件 claim 的 `st["drifted"]` 分支），release 却漏了——
+    **同一个 primitive 层的对称性缺失**，不是新功能。补上后：漂移未处置时 release 拒绝，
+    要 `--accept-drift` 显式认领这笔越界改动，且**必留 CONFLICT 痕**（锚源原则：越界不可无痕）。
     """
     with exclusive_resource(card) as lock:
         if lock is None:
@@ -314,6 +320,23 @@ def release(root: Path, card: Path, ai: str, force: bool = False):
             return True, "无租约，无需释放"
         if st["owner"] not in (ai, "—", "") and not force:
             return False, "租约属于 %s，不能由 %s 释放（确需请用 --force，会留痕）" % (st["owner"], ai)
+        #  漂移前置检查（与 claim 对称）：release 会重算哈希，若不先拦，就成了洗白越界改动的后门。
+        if st["drifted"]:
+            if not accept_drift:
+                p = conflict_file(root, card.stem,
+                                  # noqa: G1 reason=diagnostic-message sha256=6b5df2bf83ef  —— 漂移拒绝的用户可见诊断文案（内容即证据，拆短会破坏提示完整性）
+            "**释放被拒（卡内容漂移）**：%s 请求释放，但卡内容与「并发元数据」记录哈希不一致"
+                                  "（有人绕过脚本改过）。\n"
+                                  "- 记录 %s\n- 实际 %s\n\n"
+                                  "处置：先用 `card-update` 走合规通道改字段（会同步刷新哈希），"
+                                  "或核对越界改动是否可信；确认可信后用 `release --accept-drift` 显式认领这笔改动。"
+                                  % (ai, st["recorded_hash"], st["actual_hash"]))
+                return False, ("卡内容与记录哈希不一致（有人绕过脚本改过）——释放会把越界改动洗白，已拒绝并生成 %s；"
+                               "核对后用 --accept-drift 显式认领（会留痕）" % p.name)
+            #  显式认领越界改动：放行，但**必留痕**——accept 是人的判断，痕是机器的记录，二者不可互替。
+            conflict_file(root, card.stem,
+                          "**释放时接受漂移（--accept-drift）**：%s 确认卡内容的越界改动可信，release 将重算哈希。\n"
+                          "- 释放前记录 %s\n- 释放前实际 %s" % (ai, st["recorded_hash"], st["actual_hash"]))
         txt = read(card) or ""
         meta = parse_meta(card)
         for k in ("lease", "claimed_at", "expires_at"):
@@ -334,6 +357,72 @@ def release(root: Path, card: Path, ai: str, force: bool = False):
         if force and st["owner"] not in (ai, "—", ""):
             conflict_file(root, card.stem, "**强制释放**：%s 释放了 %s 的租约" % (ai, st["owner"]))
         return True, "已释放租约（承接保留为 %s）" % meta.get("owner", "—")
+
+
+def update_card(root: Path, card: Path, ai: str, mutate, token=None, need_lease: bool = True):
+    """**锁内改任务卡的业务字段**并同步刷新 NORMALIZED-SHA256 / revision。返回 (ok, 说明)。
+
+    `mutate(txt) -> new_txt`：调用方提供的字段改写函数，**只改业务字段行**（状态 / 要点 / 进度锚点 /
+    上次交接 / 已提炼 …），**不碰「并发元数据」行**——那一行由本函数统一重算。返回 None 表示放弃。
+
+    为什么要有这个原语（2026-10-15 实测出的缺口）：`references/workflow.md` §3.1 / §3.2 / §4 多处要求
+    「写回卡 / 原地更新任务卡」，但 closeout 的写端点里**没有一个能改卡的业务字段**——
+    于是唯一出路是越界手改，而手改必触发漂移、又只能靠 release 洗白。补上合规通道后，
+    越界手改才不再是「唯一选择」，release 的漂移前置检查（本文件 release）也才守得住。
+
+    层界（配合 change-control §A.1）：本函数只负责**并发原语**——锁 + 前置校验 + 刷新哈希 + 锁内写；
+    「改哪个字段、人读区怎么派生」是**业务语义**，留在 `closeout.cmd_card_update` 的 mutate 里。
+    """
+    with exclusive_resource(card) as lock:
+        if lock is None:
+            return False, "取锁失败（%s）——请稍后重试" % card.name
+        st = lease_state(card)
+        #  漂移前置：内容已被越界改过 → 拒绝（与 claim / release 对称），否则 update 会把脏内容洗白成新哈希
+        if st["drifted"]:
+            p = conflict_file(root, card.stem,
+                              # noqa: G1 reason=diagnostic-message sha256=04111bff078c  —— 用户可见诊断文案（内容即证据，拆短破坏提示完整性）
+                              "**card-update 被拒（卡内容漂移）**：%s 请求更新，但卡内容与「并发元数据」"
+                              "记录哈希不一致（有人绕过脚本改过）。\n- 记录 %s\n- 实际 %s\n\n"
+                              "处置：核对越界改动；确认可信则 release --accept-drift 认领后重 claim，再 card-update。"
+                              % (ai, st["recorded_hash"], st["actual_hash"]))
+            return False, "卡内容与记录哈希不一致（有人绕过脚本改过）——已生成 %s，请先核对再更新" % p.name
+        #  fencing（可选但推荐）：与 guard 同一口径——只比 owner 分不出「同一 AI 先后两次认领」
+        if token is not None and str(token).strip():
+            try:
+                mine = int(str(token).strip()); cur = int(st.get("fencing", "0") or 0)
+            except ValueError:
+                return False, "--token 必须是整数（认领时回显的那个 fencing 令牌）"
+            if mine != cur:
+                p = conflict_file(root, card.stem,
+                                  "**card-update 被拒（fencing，严格相等）**：你报令牌 %d，当前 %d —— "
+                                  "租约已被抢占或重新认领，这次写基于过期状态。\n\n- 处置：重新读卡 → 重新 claim → 用回显令牌重做"
+                                  % (mine, cur))
+                return False, "租约令牌不符（你 %d ≠ 当前 %d）——已生成 %s，请重新 claim 后重做" % (mine, cur, p.name)
+        #  租约归属：他人持**有效**租约即拒；过期或无租约按可写处理（与 guard 一致）
+        if need_lease and st["has_lease"] and st["active"] and st["owner"] not in (ai, "—", ""):
+            return False, "卡被 %s 持有（租约至 %s），拒绝写入" % (st["owner"], st["expires_at"])
+        txt = read(card) or ""
+        new = mutate(txt)
+        if new is None:
+            return False, "字段改写被 mutate 放弃（返回 None）"
+        if new == txt:
+            return True, "字段值未变化——未写盘（幂等）"
+        #  刷新并发元数据：revision +1，重算自指哈希（与 claim / release 同一手法：先抹槽再回填）
+        meta = parse_meta(card)
+        try:
+            meta["revision"] = str(int(meta.get("revision", "0") or 0) + 1)
+        except ValueError:
+            meta["revision"] = "1"
+        meta.setdefault("写入方式", "atomic rename")
+        meta.setdefault("冲突文件", "—")
+        meta["NORMALIZED-SHA256"] = "—"
+        new = _set_meta_line(new, meta)
+        meta["NORMALIZED-SHA256"] = card_hash_text(new)
+        new = _set_meta_line(new, meta)
+        okk, why2, _h = _write_locked(card, new, lock)
+        if not okk:
+            return False, why2
+        return True, "已更新任务卡（revision=%s）" % meta.get("revision", "1")
 
 
 # ── 共享文件写原语（**所有对共享文件的写都必须走这里**）────────────────
@@ -483,21 +572,6 @@ def guard(root: Path, card: Path, ai: str, need_lease: bool = True, token=None):
     if st["expired"]:
         return True, "租约已过期（%s）——按过期可写处理，建议随后 claim 续约" % st["expires_at"]
     return True, ""
-    st = lease_state(card)
-    if st["drifted"]:
-        p = conflict_file(root, card.stem,
-                          "写入被拒：卡内容与「并发元数据」记录哈希不一致（有人绕过脚本改过）\n"
-                          "- 记录 %s\n- 实际 %s" % (st["recorded_hash"], st["actual_hash"]))
-        return False, "卡内容与记录哈希不一致——已生成 %s" % p.name
-    if not need_lease:
-        return True, ""
-    if not st["has_lease"]:
-        return True, "提示：该卡尚未认领（无租约）——建议先跑 closeout.py claim"
-    if st["active"] and st["owner"] not in (ai, "—", ""):
-        return False, "卡被 %s 持有（租约至 %s），拒绝写入" % (st["owner"], st["expires_at"])
-    if st["expired"]:
-        return True, "租约已过期（%s）——按过期可写处理，建议随后 claim 续约" % st["expires_at"]
-    return True, ""
 
 
 # ── 并发原语的边界（**必须与实现一起读**）─────────────────────────────
@@ -505,8 +579,10 @@ def guard(root: Path, card: Path, ai: str, need_lease: bool = True, token=None):
 #    锁跟着 fd 走 → **暂停不释放、进程死亡由 OS 释放**。这两条正好对应两种故障模型：
 #      · 暂停（SIGSTOP / 调试器 / 容器冻结）：新写者**取不到锁**，只能等或明确失败（不得接管）；
 #      · 崩溃：OS 释放 → 新写者**立即接管，不依赖锁龄**。
-#  · 仅当平台/文件系统**不支持**建议锁时，退化为 `O_CREAT|O_EXCL` + rename 抢占（`mode=excl`）：
-#  · **网络文件系统（NFS / SMB）** 的建议锁语义同样不保证 → 按退化模式对待。
+#  · 平台/文件系统**不支持建议锁**时：**明确失败、不降级**（`acquire_lock` 返回失败并说明原因）；
+#     ★ 2026-10-16 更正：此处原写「退化为 O_EXCL + rename 抢占（mode=excl）」——**该退化路径已整体删除**
+#     （见 `scripts/locks.py` §EXCL 与 `references/concurrency-internals.md`）：降级会给出无法兑现的互斥保证。
+#  · **网络文件系统（NFS / SMB）** 的建议锁语义同样不保证 → 同样**按明确失败处理**（不再「按退化模式对待」）。
 #  · 跨机器并发写同一份目录**不在保证范围内**：本包的前提是「一个工作区一份本地文件系统」。
 #  · 崩溃残留的锁文件**不再阻塞**（锁在 fd 上，不在文件存在性上）；它只是垃圾，`sweep_temp` 可清。
 #  · 绕过本模块直接改文件的写者不受任何保护，只能被漂移检测抓到（详见 references/concurrency.md §0）。

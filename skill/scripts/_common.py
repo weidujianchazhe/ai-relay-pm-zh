@@ -323,6 +323,19 @@ def branch_re(root=None, anchors=True):
     """编译后的短号正则；anchors=True 时加 \\b 词边界（用于正文抽取）。"""
     pat = branch_pattern(root)
     return re.compile((r"\b" + pat + r"\b") if anchors else pat)
+
+def branch_split(whole, root=None):
+    """把完整短号拆成 (分支前缀, 序号数字)。
+
+    机制（如实）：**不做 pattern 内省**，而是把「前缀」定义为**开头的连续字母段**，
+    其余为序号；**格式合法性由调用方的 `_id_re`（即配置 pattern）先行过滤**。
+    为什么这样仍等价于配置驱动：`[:2]` 是「第二个真值」（配置一改就漂移），
+    而「开头字母段」是**格式串的固有语义**——`[A-Z]{3}[0-9]{4}` 时前缀自然变 3 位，无需改这里。
+    """
+    m = re.match(r"[A-Za-z]+", whole or "")
+    if not m:
+        raise ValueError("短号无字母前缀：%r" % (whole,))
+    return m.group(0), (whole or "")[m.end():]
 # ── 登记/声明类取值（自由文本）────────────────────────────────
 #  与 config() 的分工：config 只认数字 / 模式 / 开关 / 枚举（**有界的配置**）；
 #  这里取**无界的声明**（例如底座登记的模型名）。放在 _common 是为了**只有一条读取路径**，
@@ -395,6 +408,35 @@ def index_rows(path, root=None):
         if cells and re.match("^" + _pat + "$", cells[0]):
             rows.append((cells, i))
     return rows
+
+
+#: 索引表头的识别词。**唯一判据**——`closeout._split_index`（写侧）与
+#:  `check_index`（校验侧）都经 `index_header_at()` 取，不得各写一遍。
+INDEX_HEADER_KEY = "编号"
+
+
+def index_header_at(txt):
+    """索引表头行的下标；无表头返回 None。
+
+    为什么要共享（2026-10-15 实测出的缺陷）：**写侧判表头、校验侧不判**，于是
+    「冷区缺表头 + 热区 0 行」时 `check_index` 报
+    `[通过] 热区 0 条编号在冷区全部找得到`——**空集上的『全部找得到』不是证据**
+    （`references/code-quality.md` §0.8.1 的 `OUTPUT_CARDINALITY`：空集不得进入一致性比较），
+    而 `index-add` 随后又因同一个缺表头直接拒写。绿灯把结构缺失盖住了。
+    """
+    for i, line in enumerate((txt or "").splitlines()):
+        s = line.strip()
+        if s.startswith("|") and INDEX_HEADER_KEY in s:
+            return i
+    return None
+
+
+def index_table_state(path):
+    """索引文件的表结构状态 → (存在?, 可解析?)。文件不可读时返回 (False, False)。"""
+    txt = read(path)
+    if txt is None:
+        return False, False
+    return True, index_header_at(txt) is not None
 
 def newest_handoff(root):
     """取"最新记录"：优先交接号最大者，否则文件名倒序第一篇。

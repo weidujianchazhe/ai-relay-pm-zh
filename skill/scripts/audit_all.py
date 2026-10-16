@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# NOPMD: 核查编排器的聚合四档（3>1>2>0）、成员退出码口径与"部分核查不得冒充全盘"的留痕规则必须就地写明——它们是判据本身，删注释即失去复核入口，且 rc=3 与 rc=1 的区分全靠这几行。
 """audit_all.py —— 全盘核查入口（编排器 + 留痕）
 
 用法：
@@ -145,19 +146,50 @@ def main() -> int:
             print("[问题] %s 超时（600s）" % m)
             rc = 3
         results.append((m, rc))
-        worst = 1 if (rc == 1 or rc == 3 or worst == 1) else (2 if (rc == 2 or worst == 2) else 0)
+        #  聚合四档，**3 单独成档、不折进 1**（2026-10-15 实测出的缺陷）：
+        #    旧实现 `worst = 1 if (rc == 1 or rc == 3 or worst == 1) else ...` 把「成员脚本自己崩了」(3)
+        #    折成「项目有问题」(1)。后果：每 7 天的定期全盘核查在**健康工作区**上永久 exit 1，
+        #    而各成员汇总里 `[问题] 0`——红灯无从归因（实测成因：check_size_budget 只认
+        #    config/defaults.yml，而实例工作区按 README ② 实例化成 config.yml → 恒返回 3）。
+        #    这违反 scripts/README.md 的明文约定：「脚本自身错误一律退出码 3，与『门禁抓到真问题』(1)
+        #    分开——否则核查者会把『脚本崩了』读成『项目有问题』」。
+        #  优先级 **3 > 1 > 2 > 0**：核查工具自身失效时，它给出的「项目有问题」结论同样不可信，
+        #    故 3 覆盖 1。两者都必须在下面的「成员结果」行里逐成员可见，不能只靠聚合码归因。
+        if rc == 3:
+            worst = 3
+        elif rc == 1 and worst != 3:
+            worst = 1
+        elif rc == 2 and worst not in (1, 3):
+            worst = 2
 
     # ── 2. 留痕 ──
     print()
     print("=" * 52)
     print("成员结果：" + "  ".join("%s=%d" % (m[:-3], rc) for m, rc in results))
     print("聚合退出码：%d（0 全通过 · 1 有问题 · 2 仅待核 · 3 脚本错误）" % worst)
+    #  归因行：**把红灯落到具体成员**，避免「聚合 1 但看不出是谁」的排查成本。
+    #  两类分开点名——「项目有问题」与「脚本自身错误」的处置完全不同：
+    #    前者去修工作区，后者去修本包脚本（或它依赖的布局），**不要拿它当项目缺陷去查**。
+    bad = [m[:-3] for m, rc in results if rc == 1]
+    broken = [(m[:-3], rc) for m, rc in results if rc == 3]
+    if bad:
+        problem("门禁判出问题：%s —— 去修工作区" % "、".join(bad))
+    if broken:
+        problem("成员脚本自身错误：%s —— **不是项目有问题**，是核查工具失效（先修脚本/布局，再重跑核查）"
+                % "、".join("%s(rc=%d)" % (m, rc) for m, rc in broken))
     if not a.no_record:
         now = datetime.now(timezone.utc).astimezone().replace(microsecond=0).isoformat()
-        line = "- %s · 全盘核查 · %s · 聚合退出码 %d（%s）" % (
-            now, ai_id(), worst, " ".join("%s=%d" % (m[:-3], rc) for m, rc in results))
+        #  新鲜度自查用的 EVIDENCE_RE 正是认「· 全盘核查」这个字样；若部分运行也写它，
+        #  就会**把部分审计冒充完整审计，并刷新完整审计的新鲜度**（后续定期排查变假账）。
+        #  处置：部分运行的痕迹用不同字样（**不匹配 EVIDENCE_RE**），因此不刷新全盘新鲜度。
+        _scope = "部分核查（--only: %s）" % a.only if a.only else "全盘核查"
+        line = "- %s · %s · %s · 聚合退出码 %d（%s）" % (
+            now, _scope, ai_id(), worst, " ".join("%s=%d" % (m[:-3], rc) for m, rc in results))
         if _append_evidence(root, line):
-            ok("核查证据已留痕（REVIEWS.md 一行，带机器戳）")
+            if a.only:
+                note("部分核查痕迹已留痕（REVIEWS.md 一行）——它不满足「全盘核查」证据，新鲜度不会被它刷新")
+            else:
+                ok("核查证据已留痕（REVIEWS.md 一行，带机器戳）")
     return worst
 
 

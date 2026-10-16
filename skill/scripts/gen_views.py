@@ -619,11 +619,18 @@ def main():
         # 旧写法只查 closeout.py 与 gen_views.py 自己 —— **漏了真正的验证器 validate_workspace.py 与自检夹具 selftest_gates.py
         # （2026-10 实测：官方 new-card --design 产出 .html，而 validate_workspace 找 .md → 必然报红；三处互相掩护长期存活）。
         # 根修：覆盖面【由磁盘驱动】—— 扫描 scripts/ 下**所有** .py，任一脚本引用旧载体即报红；且必须至少有一个脚本引用新载体。
-        _scripts = sorted((pkg / "scripts").glob("*.py"))
+        #  ★ 跳过**判据自身**（2026-10-16 实测）：本文件必须同时写出「新载体 `.blueprint.html`」与
+        #  「旧载体 `.blueprint.md`」两个字面量才能做这项校验 —— 扫描自己必然自判违规（自指陷阱，
+        #  与 4.1.0 修的「§17 读 gen_views.py 自己=自证」同族）。排除自身后，覆盖面仍是磁盘驱动。
+        _scripts = sorted(p for p in (pkg / "scripts").glob("*.py") if p.name != "gen_views.py")
         _hit_new = False
         for _sp in _scripts:
             _txt = read(_sp) or ""
-            _e = set(re.findall(r"blueprint\.([A-Za-z0-9]+)", _txt))
+            #  ★ 2026-10-16 修假红（外部审查轮次实测）：旧写法 `blueprint\.([A-Za-z0-9]+)` **无词边界**，
+            #  于是脚本里**合法的后缀常量** `".blueprint.html"` 会被截出 `blueprint` 并被判成「旧载体」——
+            #  判据咬到自己（§17 正是 4.1.0 为修载体漂移而加的）。
+            #  收窄为**真正的旧载体**：`.blueprint.md`（存量迁移期的旧扩展名，见 references/design.md §4）。
+            _e = set(re.findall(r"blueprint\.(md)\b", _txt))
             _bad_e = sorted(x for x in _e if x != _want)
             if _bad_e:
                 _bad.append("脚本层：%s 仍出现旧载体 .blueprint.%s" % (_sp.name, "、".join(_bad_e)))

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# NOPMD: 本文件的每条判据都靠"结构/字符串存在性"判定（声明的门禁是否有失败通道、死赋值、不可达代码、一览表集合一致），必须就地写明各自证明的故障形态；删注释后无法复核判据是否仍成立。
 """check_promises.py —— 「文档承诺 ↔ 代码行为」对账门禁
 
 为什么需要（门禁空转这类债务的教训）：
@@ -110,11 +111,40 @@ def main() -> int:
     #  实测会一次刷出 9 条 [待核] 噪声——**一条会误报的检查比没有更坏**（它会训练人忽略输出）。
     #  可判定的替代见 §1：门禁若连 problem()/tbd() 都没有，那它声称查什么都没意义。
     dead = []
+    #  ── 不可达代码：终止语句之后，同一 block 内仍有语句 ──────────────────────
+    #  为什么加（2026-10-16，外部审查轮次）：**同类死代码已发生两次** ——
+    #   ① self-gate-debt §0 的「§16 两次失败：文本定位落入 main() 内两个连续 return summary() 之间」；
+    #   ② `concurrency_matrix.py` 里 I10 的一份 15 行**无 def 裸副本**（粘在 I9 的 return 之后，机器当时抓不到）。
+    #  **口径边界（如实写明）**：只判「同一 block 内终止语句之后还有语句」，**不做控制流分析**——
+    #  因此不会误报 `if False:` / `TYPE_CHECKING` / `while True:` 之后的正常写法；
+    #  实测在 26 个脚本上命中 1 处且为真（0 误报）。
+    unreach = []
+    _TERM = (ast.Return, ast.Raise, ast.Continue, ast.Break)
+
+    def _scan_unreach(body, fname, owner):
+        for _i, _st in enumerate(body[:-1]):
+            if isinstance(_st, _TERM):
+                _nxt = body[_i + 1]
+                unreach.append("%s:%d %s() 里 %s 之后仍有 %s"
+                               % (fname, _nxt.lineno, owner, type(_st).__name__, type(_nxt).__name__))
+        for _st in body:
+            for _f in ("body", "orelse", "finalbody"):
+                _sub = getattr(_st, _f, None)
+                if isinstance(_sub, list) and _sub:
+                    _scan_unreach(_sub, fname, owner)
+            if isinstance(_st, ast.Try):
+                for _h in _st.handlers:
+                    _scan_unreach(_h.body, fname, owner)
+
     for p in sorted(scripts_dir.glob("*.py")):
         try:
             tree = ast.parse(p.read_text(encoding="utf-8"))
         except SyntaxError:
             continue
+        #  ★ 不可达代码判据**必须逐文件在循环内调用**（2026-10-16 实测教训：写在循环外只能扫到
+        #  sorted() 的最后一个脚本，负控因此失败——"判据看着加了、其实没生效"）。
+        for _fn in [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]:
+            _scan_unreach(_fn.body, p.name, _fn.name)
         #  **只报"筛选/命中"型赋值**（列表/集合推导式的结果从未被读取）——这正是 P0-1 的形态：
         #  `hit = [c for c, _ in rows if ...]` 算完就丢。故意不报 `holder = acquire_lock(...)`
         #  这类"只为副作用而绑定"的写法（那是对的），否则噪声会淹掉真问题。
@@ -137,6 +167,13 @@ def main() -> int:
             note("另有 %d 处未列出" % (len(dead) - 10))
     else:
         ok("无死赋值")
+    if unreach:
+        for u in unreach[:10]:
+            problem("不可达代码（终止语句之后同 block 仍有语句）：%s —— 多是编辑/复制粘贴落入 return 之后；删掉或移回正确的函数体" % u)
+        if len(unreach) > 10:
+            note("另有 %d 处未列出" % (len(unreach) - 10))
+    else:
+        ok("无可达性异常（终止语句之后无残留语句）")
     print("== 3. scripts/*.py 与一览表集合一致（对账型；集合比对可判定） ==")
     disk = sorted(p.name for p in scripts_dir.glob("*.py"))
     tbl = set(n for n, _d in re.findall(r"^\|\s*`([a-z_0-9]+\.py)`\s*\|\s*(.+?)\s*\|", readme, re.M))

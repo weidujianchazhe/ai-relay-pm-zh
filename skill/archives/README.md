@@ -8,7 +8,7 @@
 |---|---|---|
 | `reports/`（归档的交接文件） | reports/ 下的旧交接记录 | 篇数达到 MAP「reports 归档阈值」（默认 20）滚动归档 |
 | `done/`（完成卡归档） | tasks/ 下的完成任务卡 | 完成型提交时移入（**不删卡**） |
-| `INDEX_archived.md`（INDEX 归档文件） | INDEX.md 的历史行 | 初始化即创建；先追加并校验 hash，再 CAS 更新主文件；失败保留主文件并写 `CONFLICT_*.md` |
+| `INDEX_archived.md`（INDEX 归档文件） | INDEX.md 的历史行 | 初始化即由 `templates/archives/INDEX_ARCHIVED.template.md` 实例化（**带表头的空表，不是空文件**）；先追加并校验 hash，再 CAS 更新主文件；失败保留主文件并写 `CONFLICT_*.md` |
 
 ## 归档算法
 

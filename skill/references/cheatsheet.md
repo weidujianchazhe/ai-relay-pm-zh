@@ -57,6 +57,7 @@ python scripts/check_index.py        <管理区>   # 索引完整性
 python scripts/reconcile.py          <管理区>   # 三方一致性
 python scripts/code_metrics.py       <源码根>     # 代码度量
 python scripts/closeout.py           <管理区> new-card "<任务名>"   # 建任务卡骨架（--design 建的是设计卡）
+python scripts/closeout.py           <管理区> card-update "<卡名>" --ai <标识> --field <字段> --value <值>   # 锁内写回卡字段（改状态/进度锚点/上次交接…），同步刷新哈希；**不要手改卡**（会触发漂移）
 python scripts/stamp.py --ai-id                   # 取 AI 标识（认领时）
 python scripts/audit_all.py          <管理区>   # 全盘核查 + 留痕
 python scripts/closeout.py           <管理区> reviews-archive     # REVIEWS 溢出滚动归档（超限时做一次）

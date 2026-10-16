@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# NOPMD: "表结构先判、再判内容"与"两区皆空不构成一致性证据"是本文件的核心契约（code-quality §0.8.1 OUTPUT_CARDINALITY），注释即契约的现场依据，删掉就无法复核该判据是否仍在生效。
 """check_index.py —— 索引完整性校验
 
 用法：python check_index.py <管理区>
@@ -18,7 +19,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import branch_pattern, index_rows, note, ok, problem, read, resolve_under, summary, tbd, run  # noqa: E402
+from _common import (  # noqa: E402
+    INDEX_HEADER_KEY, branch_pattern, index_rows, index_table_state, note, ok, problem, read,
+    resolve_under, summary, tbd, run,
+)
 
 VALID_TYPES = ["[接力]", "[完成]", "[废弃]", "[里程碑]"]
 BRANCH_RE = re.compile(r"^\|\s*([A-Z]{2})\s*\|")
@@ -95,12 +99,32 @@ def main():
     if not cold.exists():
         tbd("冷区索引不存在：%s" % cold)
     else:
+        # ── 表结构先判，再判内容 ────────────────────────────────────
+        #  为什么要先判结构（2026-10-15 实测出的缺陷）：旧实现直接用 index_rows() 取数据行，
+        #  **从不判断表头是否存在**。于是「冷区缺表头 + 热区 0 行」时本脚本报
+        #  `[通过] 热区 0 条编号在冷区全部找得到`——空集上的「全部找得到」不是证据
+        #  （references/code-quality.md §0.8.1 的 OUTPUT_CARDINALITY：空集不得进入一致性比较），
+        #  而 index-add 随后因同一个缺表头直接拒写。**绿灯把结构缺失盖住了**，
+        #  且 exit 0 会让人以为索引完好。写侧与校验侧现在共用 _common.index_header_at 判据。
+        hot_exists, hot_ok = index_table_state(hot)
+        cold_exists, cold_ok = index_table_state(cold)
+        if not cold_ok:
+            problem("冷区表结构无法解析（缺「%s」表头）：%s —— index-add 会拒绝写入；"
+                    "须由 templates/archives/INDEX_ARCHIVED.template.md 实例化" % (INDEX_HEADER_KEY, cold))
+        if hot_exists and not hot_ok:
+            problem("热区表结构无法解析（缺「%s」表头）：%s" % (INDEX_HEADER_KEY, hot))
+
         # 冷区应全量：热区的每条编号都应能在冷区找到（移入不删除）
         hot_rows = {c[0] for c, _ in index_rows(hot)}
         cold_rows = {c[0] for c, _ in index_rows(cold)}
         missing = sorted(hot_rows - cold_rows)
         if missing:
             problem("热区编号在冷区缺失（违反『移入不删除』）：%s" % "、".join(missing[:6]))
+        elif not hot_rows and not cold_rows:
+            #  两区皆空：**不构成「一致性成立」的证据**。新工作区正常，但也不能算通过——
+            #  否则「冷区结构缺失」这类问题会被一条永真的 [通过] 掩盖（正是本次修的缺陷）。
+            if cold_ok:
+                tbd("热区与冷区均为 0 行——空集不参与一致性比较（新工作区正常；有记录后本项才可判定）")
         else:
             ok("热区 %d 条编号在冷区全部找得到（移入不删除成立）" % len(hot_rows))
         # 冷区累计数应与实际行数一致

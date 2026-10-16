@@ -1,10 +1,14 @@
 # 技能包清单与权威源声明（MANIFEST）
 
-> **版本**：`4.1.0`
+> **版本**：`4.1.1`
 > **设计区载体（v4.0.0 起）**：蓝图 = **`designs/<主题>.blueprint.html`**（人读）· 详述 = **`designs/<主题>.md`** · **设计骨架 = `designs/SKELETON.html` + `SKELETON.md`**（同一骨架两 Reading）· 归档 = **`designs/archives/`**（与任务归档分离）。
 > **本版定位**：**语言无关的软件工程管理**（全局版起点）——C / C++ / Python 是同一套工程管理下的不同**适配层**；语言只决定适配，不改变管理模型。
 > **状态**：**语义扩展中**（v3.9.1）——v4.0.0 里程碑：**技术抉择层已入正文**（§0.5）· **抉择与证据受审计**；
 > **v4.1.0**：**声明与实现脱节清理**（短号格式接回单一真值 `naming.branch_code_pattern` · 短号抽取补齐 4~5 位 · 设计蓝图载体扩展名全包统一 · `[待填]` 计数排除脚本说明行）——**不新增能力、不改格式、存量零迁移**（见 `references/version-boundaries.md` §8.11）。
+> **v4.1.1**：**缺陷修复版**（两轮实跑暴露，全部并入本版；§8.8 未发布故不升号）。
+> **第一轮**：`index-add` 对合法短号崩溃 · 同分支递增校验静默失效 · 自检补「端点能不能跑 + 判据还灵不灵」双正控 · `defaults.yml` 去 BOM 补申报。
+> **第二轮**：`audit_all` 在健康工作区永久假红（`check_size_budget` 认工作区 `config.yml` + 退出码归位 + 聚合 `rc=3` 单独成档并点名）· 冷区补模板 `templates/archives/INDEX_ARCHIVED.template.md` · `check_index` 消除空真绿灯 · `release` 补漂移前置（`--accept-drift` 显式认领并留痕）· **新增 `card-update` 端点**（补 `workflow` §3.1/§3.2/§4「写回卡」缺口，是 release 缺陷的上游根因）· 自检补正控 3/4。
+> **能力变化**：**新增 1 个写端点（`card-update`）+ 1 个模板**（如实登记，非「零新增」）；**编号格式不变** · **存量编号与索引零迁移** · 使用方无需动作（详见 `references/version-boundaries.md` §8.12）。
 > **本文件是版本号的唯一落点。** 目录内其他文件**不各自声明版本**。
 
 ---
@@ -147,7 +151,7 @@ scripts/                        可执行脚本（通用门禁；一表全览见
   selftest_gates.py               门禁变异自检（注入故障，断言门禁必须变红）
   new_local.py                    脚手架：生成符合统一接口的项目专属脚本骨架
   local/                          项目自定义脚本（技能包升级不覆盖；契约见 local/README.md）
-templates/                      模板：MAP/STATE/INDEX/REVIEWS/任务卡/设计卡+设计蓝图/交接 + CARD.md（单文件卡片）
+templates/                      模板：MAP/STATE/INDEX/REVIEWS/任务卡/设计卡+设计蓝图/交接 + CARD.md（单文件卡片）+ archives/INDEX_ARCHIVED（冷区索引，**带表头的空表**）
 adapters/                       按语言落地附录（**各语言一份，以目录为准、不写死名单**），不属技能正文
 locales/                        展示元数据（displayName / brief，供桌面插件页显示）
 examples/                       范例库骨架（索引表 + 入库流程 + project/external 两分区；**本体不随包分发**）
