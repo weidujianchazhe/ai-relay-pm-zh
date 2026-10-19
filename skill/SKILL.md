@@ -123,6 +123,7 @@ compatibility: "需要本地文件系统与命令执行能力。纯对话、网�
 | **设计资产 / 研究验证材料** | `designs/README.md`（**设计区自己的路由表**：地图 + 该读哪个文件；管理区只到它，不逐项登记设计区文件）|
 | **工程质量与多语言**（六份，按需取）| `references/language-adapters.md` · `references/version-boundaries.md` · `references/language-quality-adaptation-plan.md` · `references/multi-language-quality-gate-data-schema.md` · `references/quality-baseline-design.md` · `references/empirical-evidence/` |
 | **证据与内部实现**（维护者向）| `references/self-gate-debt.md` · `references/provider-gates.md` · `references/concurrency-internals.md` |
+| 想知道「为什么有这条规则」 | `references/history-policy.md`（**协议：历史不得耦合**）；实际历史在 `references/archives/`（非正文，接手不必读）|
 | 术语 / 历史叫法 | `references/glossary.md` |
 | 无自动加载能力的 Agent | `references/agent-compatibility.md` |
 | 存量项目接入 | `LEGACY_ONBOARDING.md` |
