@@ -208,10 +208,15 @@ def write_cas(path: Path, new_text: str, expected_hash: str):
       ② 只把临时文件改成唯一名**也不够**：两个写者可以都读到同一个 expected、都通过比对、
          先后 replace —— 仍是 lost update。**唯一名只治异常，不治语义。**
       ③ 正确做法：把「比对」与「写入」放进**同一个临界区**（锁内）＋写后回读校验；
-         任何失败都**返回 False 而不是抛异常**。
+         任何**运行期**失败都**返回 False 而不是抛异常**；但**空 `expected_hash` 是调用方写错**（契约违反），
+         在 try 之外**直接抛 ValueError**，不吞成 False —— 否则这个陷阱永远发现不了。
     """
     if not path.exists():
         return False, "文件不存在或不可读", ""
+    #  ★ 空哈希是【调用方写错】，不是运行期失败 ⇒ 在 try 之外直接抛（契约见 docstring）。
+    if not expected_hash:
+        raise ValueError("write_cas 需要非空 expected_hash —— 空哈希等于无条件覆盖，是会悄悄失效的 API 陷阱")
+
     try:
         with exclusive_resource(path) as lock:
             if lock is None:
@@ -219,8 +224,6 @@ def write_cas(path: Path, new_text: str, expected_hash: str):
             cur = file_hash(path)
             if cur is None:
                 return False, "文件不存在或不可读", ""
-            if not expected_hash:
-                raise ValueError("write_cas 需要非空 expected_hash（空哈希等于无条件覆盖，这是会悄悄失效的 API 陷阱；确需强制覆盖请用显式参数）")
             if cur != expected_hash:
                 return False, "文件已被他人修改（记 %s，实际 %s）" % (expected_hash, cur), cur
             return _write_locked(path, new_text, lock)

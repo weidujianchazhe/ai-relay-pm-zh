@@ -57,11 +57,6 @@ def _row_re(root=None):
     return re.compile(r"^\|\s*(" + branch_pattern(root) + r")\s*\|")
 
 
-def _atomic_write(path: Path, text: str):
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(text, encoding="utf-8", newline="")
-    os.replace(tmp, path)
-
 
 def _create_new(path: Path, text: str) -> bool:
     """**原子创建新文件**：文件已存在则失败，**绝不覆盖**；且**不产生半份文件**。
