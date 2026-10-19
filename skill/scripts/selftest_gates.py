@@ -280,6 +280,26 @@ def cases():
              "        return 1\n"
              "    return 0\n",
              encoding="utf-8")),
+        # 2026-10-16 外部评审（Claude）：退出判定的作用域边界 —— 以下两个注入都必须变红。
+        # 修前漏报（rc=0）：内层循环的 break、嵌套函数的 return 被误当成外层 while True 的退出。
+        ("correctness_rules", "注入 嵌套 break（外层 while 仍无退出）", "correctness_rules.py", ["{r}/src"],
+         lambda d: (d / "src" / "mod.py").write_text(
+             "def spin(xs):\n"
+             "    while True:\n"
+             "        for x in xs:\n"
+             "            if x:\n"
+             "                break\n",
+             encoding="utf-8")),
+        ("correctness_rules", "注入 嵌套函数 return 冒充退出", "correctness_rules.py", ["{r}/src"],
+         lambda d: (d / "src" / "mod.py").write_text(
+             "def outer(xs):\n"
+             "    while True:\n"
+             "        def inner():\n"
+             "            return 1\n"
+             "        inner()\n",
+             encoding="utf-8")),
+        # 已知限制（不设"必须变红"用例）：句柄泄漏是【观察级】（rc=2），不是阻断。
+        # 修后行为：不再被无关的 `with g` 掩盖，能定位到真正的 `f` —— 级别不变，故不进阻断用例。
         ("correctness_rules", "注入 while True 无 break", "correctness_rules.py", ["{r}/src"],
          lambda d: (d / "src" / "mod.py").write_text(
              "def f(tol):\n"
