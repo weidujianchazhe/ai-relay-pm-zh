@@ -77,6 +77,23 @@ def _used_after(fn, name, lineno):
     return False
 
 
+def _own_exit(loop):
+    """本 while 循环自身的退出语句（break 不穿透内层循环；return/raise 不穿透嵌套函数/类/lambda）。"""
+    def walk(node, in_inner_loop):
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)):
+                continue
+            if isinstance(child, ast.Break) and not in_inner_loop:
+                return True
+            if isinstance(child, (ast.Return, ast.Raise)):
+                return True
+            inner = in_inner_loop or isinstance(child, (ast.For, ast.AsyncFor, ast.While))
+            if walk(child, inner):
+                return True
+        return False
+    return walk(loop, False)
+
+
 def check_function(fn):
     out = []
     body = fn.body
@@ -120,14 +137,13 @@ def check_function(fn):
                         continue
                 except Exception:
                     pass
-                if True:
-                    out.append(("block", n.lineno,
-                                "浮点判等：与 %r 用 ==/!= 比较 —— 二进制浮点不精确，应用容差比较（math.isclose）" % side.value))
-                    break
+                out.append(("block", n.lineno,
+                            "浮点判等：与 %r 用 ==/!= 比较 —— 二进制浮点不精确，应用容差比较（math.isclose）" % side.value))
+                break
     # M4 无上限迭代：while True 且体内无 break / return / raise
     for n in ast.walk(fn):
         if isinstance(n, ast.While) and isinstance(n.test, ast.Constant) and n.test.value is True:
-            has_exit = any(isinstance(x, (ast.Break, ast.Return, ast.Raise)) for x in ast.walk(n))
+            has_exit = _own_exit(n)
             if not has_exit:
                 out.append(("block", n.lineno,
                             "while True 且无 break/return/raise —— 无退出条件的迭代（疑似死循环）"))
@@ -161,7 +177,9 @@ def check_function(fn):
             if isinstance(n, ast.With):
                 for it in n.items:
                     c = it.context_expr
-                    if isinstance(c, ast.Call) and isinstance(c.func, ast.Name) and c.func.id == "open":
+                    if isinstance(c, ast.Name) and c.id == name:
+                        handed = True
+                    if isinstance(it.optional_vars, ast.Name) and it.optional_vars.id == name:
                         handed = True
         if not handed:
             out.append(("warn", ln, "「%s」= open(...) 未见 close() 或 with，且未交给调用方 —— 句柄可能泄漏" % name))
