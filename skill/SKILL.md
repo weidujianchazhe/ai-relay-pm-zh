@@ -118,6 +118,7 @@ compatibility: "需要本地文件系统与命令执行能力。纯对话、网�
 | 设计两件套 | `references/design.md` |
 | 多 AI 分工 / 角色 | `references/collaboration.md` |
 | **改本技能本身** | `references/change-control.md`（改造门禁，缺一不得动手） |
+| **设计资产 / 研究验证材料** | `designs/README.md`（**设计区自己的路由表**：地图 + 该读哪个文件；管理区只到它，不逐项登记设计区文件）|
 | **工程质量与多语言**（六份正文，**按需取，启动时不必全读**）| `references/language-adapters.md`（适配层 / 探针契约 / 能力接口）· `references/version-boundaries.md`（双线 / 不可反向覆盖 / `TBD` / 下一版准入）· `references/language-quality-adaptation-plan.md`（三级口径 / L0–L10）· `references/multi-language-quality-gate-data-schema.md`（六质量域）· `references/quality-baseline-design.md`（先验定「测什么」）· `references/empirical-evidence/` |
 | **证据与内部实现**（维护者向 / 排障向）| `references/self-gate-debt.md`（本包自门禁债，含 D1–D8）· `references/provider-gates.md`（Provider 门禁档案）· `references/concurrency-internals.md`（并发实现内部） |
 | 术语 / 历史叫法 | `references/glossary.md` |
