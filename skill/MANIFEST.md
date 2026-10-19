@@ -87,7 +87,7 @@
 SKILL.md                        入口 + 路由表（平台技能格式）
 MANIFEST.md                     本文件：版本与清单声明
 LEGACY_ONBOARDING.md            存量项目接入
-BLUEPRINT.md                    设计蓝图 · **第 1 页：总览**（页索引在本文件末）
+BLUEPRINT.md                    **学习路径**（从零到能作业 5 步）+ 展示面 · 页索引在本文件末
 blueprint/                      设计蓝图分页 02~08（接手链路 / 门禁 / 产物 / 设计 / 代码规范 / 强耦合 / 边界）
 config/defaults.yml             出厂默认值（非运行时真值；真值在实例 MAP 规则段）
 references/                     协议正文（权威源，按功能域分文件；README.md 为平台展示页）

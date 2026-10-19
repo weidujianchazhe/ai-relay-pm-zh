@@ -22,7 +22,7 @@ compatibility: "需要本地文件系统与命令执行能力。纯对话、网�
 **准入门槛（只此一条）**：**不先知道就会返工、或会破坏契约。**
 不满足这条的，一律按需拉取——**把它们列进来只会让这一屏变成没人读的第二份目录**。
 
-> **管理区**＝你为这个项目建的那套协作文件的落脚处（任务卡 / 索引 / 快照 / 记录 / 设计区）；**它是一个目录，不是平台**。
+> **管理区**＝你为这个项目建的那套协作文件的落脚处（任务卡 / 索引 / 快照 / 记录 / 设计区）；**它是一个目录，不是平台**（默认与项目区同级、名 = `<项目名>-管理区`）。
 
 ```
 ① **什么形态** —— 卡片 / 轻量工作区 / 完整工作区？
@@ -121,15 +121,15 @@ compatibility: "需要本地文件系统与命令执行能力。纯对话、网�
 | 多 AI 分工 / 角色 | `references/collaboration.md` |
 | **改本技能本身** | `references/change-control.md`（改造门禁，缺一不得动手） |
 | **设计资产 / 研究验证材料** | `designs/README.md`（**设计区自己的路由表**：地图 + 该读哪个文件；管理区只到它，不逐项登记设计区文件）|
-| **工程质量与多语言**（六份正文，**按需取，启动时不必全读**）| `references/language-adapters.md`（适配层 / 探针契约 / 能力接口）· `references/version-boundaries.md`（双线 / 不可反向覆盖 / `TBD` / 下一版准入）· `references/language-quality-adaptation-plan.md`（三级口径 / L0–L10）· `references/multi-language-quality-gate-data-schema.md`（六质量域）· `references/quality-baseline-design.md`（先验定「测什么」）· `references/empirical-evidence/` |
-| **证据与内部实现**（维护者向 / 排障向）| `references/self-gate-debt.md`（本包自门禁债，含 D1–D8）· `references/provider-gates.md`（Provider 门禁档案）· `references/concurrency-internals.md`（并发实现内部） |
+| **工程质量与多语言**（六份，按需取）| `references/language-adapters.md` · `references/version-boundaries.md` · `references/language-quality-adaptation-plan.md` · `references/multi-language-quality-gate-data-schema.md` · `references/quality-baseline-design.md` · `references/empirical-evidence/` |
+| **证据与内部实现**（维护者向）| `references/self-gate-debt.md` · `references/provider-gates.md` · `references/concurrency-internals.md` |
 | 术语 / 历史叫法 | `references/glossary.md` |
 | 无自动加载能力的 Agent | `references/agent-compatibility.md` |
 | 存量项目接入 | `LEGACY_ONBOARDING.md` |
 | 骨架与出厂值 | `templates/` · `config/defaults.yml` |
 | 按语言落地 | `adapters/`（**不属正文**） |
 | 全量文件清单与版本 | `MANIFEST.md` |
-| 设计蓝图（展示用） | `BLUEPRINT.md` + `blueprint/` |
+| **想先学怎么用** / 设计蓝图 | **`BLUEPRINT.md`（5 步上手）**；想深入某域 → `blueprint/` |
 
 ---
 
