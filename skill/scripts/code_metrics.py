@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """code_metrics.py —— 代码度量门禁（三档阈值机检）
 
-用法：python code_metrics.py <源码根> [--ws=<管理区>] [--lang=python]（**本包只度量 Python**；--lang 写 java/javascript 只是显式声明「本栈交给外部工具」，本包会给出 [待核] 指路，不产出读数）
+用法：python code_metrics.py <源码根> [--ws=<管理区>] [--lang=python]（**本包已接线＝仅 Python**（可直接跑）；C/C++/Go/JS/TS/Rust **已登记适配器但未接线**，工具缺失时报 [待核]；--lang 写 java/javascript 是显式声明「本栈交给外部工具」，本包会给出 [待核] 指路，不产出读数）
       --ws 省略时按源码根向上找实例 MAP（阈值与分层一律来自实例，不写死在脚本里）
 何时跑：每次改代码后 / 提交前
 依据：references/code-quality.md §1、§2（三档阈值 = 推荐线 / 预警区 / 拦截线）
@@ -588,7 +588,7 @@ def list_exemptions(files, th, exempt_re, hollow_re):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if not args:
-        print("用法：python code_metrics.py <源码根> [--ws=<管理区>] [--lang=python]（**本包只度量 Python**；--lang 写 java/javascript 只是显式声明「本栈交给外部工具」，本包会给出 [待核] 指路，不产出读数）")
+        print("用法：python code_metrics.py <源码根> [--ws=<管理区>] [--lang=python]（**本包已接线＝仅 Python**（可直接跑）；C/C++/Go/JS/TS/Rust **已登记适配器但未接线**，工具缺失时报 [待核]；--lang 写 java/javascript 是显式声明「本栈交给外部工具」，本包会给出 [待核] 指路，不产出读数）")
         print("      --exemptions  只导出豁免与预警区清单 + 聚集度（回查用，恒退出 0）")
         return 3
     # 一律解析成绝对路径：相对 src + 绝对 --ws 会让 p.relative_to(root) 直接抛错（实测踩过），

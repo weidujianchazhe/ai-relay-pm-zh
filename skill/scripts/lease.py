@@ -219,7 +219,9 @@ def write_cas(path: Path, new_text: str, expected_hash: str):
             cur = file_hash(path)
             if cur is None:
                 return False, "文件不存在或不可读", ""
-            if expected_hash and cur != expected_hash:
+            if not expected_hash:
+                raise ValueError("write_cas 需要非空 expected_hash（空哈希等于无条件覆盖，这是会悄悄失效的 API 陷阱；确需强制覆盖请用显式参数）")
+            if cur != expected_hash:
                 return False, "文件已被他人修改（记 %s，实际 %s）" % (expected_hash, cur), cur
             return _write_locked(path, new_text, lock)
     except Exception as e:
@@ -292,7 +294,7 @@ def claim(root: Path, card: Path, ai: str, minutes: int, steal: str = ""):
         new = _set_meta_line(_set_owner_line(txt, ai), meta)
         meta["NORMALIZED-SHA256"] = card_hash_text(new)
         new = _set_meta_line(_set_owner_line(txt, ai), meta)
-        # 锁内写：不再走 write_cas（那会二次取锁）；_write_locked 会做写后回读与归属校验
+        # 锁内写：不再走 write_cas（那会二次取锁）；_write_locked 会做写后回读
         okk, why2, _h = _write_locked(card, new, lock)
         if not okk:
             return False, why2
@@ -350,7 +352,7 @@ def release(root: Path, card: Path, ai: str, force: bool = False, accept_drift: 
         new = _set_meta_line(txt, meta)
         meta["NORMALIZED-SHA256"] = card_hash_text(new)
         new = _set_meta_line(txt, meta)
-        # 锁内写（不再二次取锁）；_write_locked 会做写后回读与归属校验
+        # 锁内写（不再二次取锁）；_write_locked 会做写后回读
         okk, why2, _h = _write_locked(card, new, lock)
         if not okk:
             return False, why2

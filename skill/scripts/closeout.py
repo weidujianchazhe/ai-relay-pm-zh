@@ -374,10 +374,17 @@ def cmd_new_record(root: Path, a) -> int:
         return summary()
 
     # 交接号 = 现有最大值 + 1
+    #   为什么必须同时扫 archives/：archive-reports 会把旧记录**移出** reports/，
+    #   只扫 reports/ 会让编号在归档后**回退**并与冷区已有编号碰撞（静默数据错误）。
     mx = 0
     for p in iter_reports(root):
         for m in re.finditer(r"交接\s*#(\d+)", read(p) or ""):
             mx = max(mx, int(m.group(1)))
+    arch = root / "archives"
+    if arch.is_dir():
+        for p in sorted(arch.rglob("*.md")):
+            for m in re.finditer(r"交接\s*#(\d+)", read(p) or ""):
+                mx = max(mx, int(m.group(1)))
     no = mx + 1
 
     # ── 预填：**只填机械可派生的，语义字段一律留 [待填]** ──────────────
@@ -416,7 +423,9 @@ def cmd_new_record(root: Path, a) -> int:
     body = (Path(__file__).resolve().parent / "templates" / "closeout_record.md").read_text(encoding="utf-8") % (title, no, " + ".join(src), need, files, chg, TBD,
        "%s（若本轮无设计级取舍，改写为「本轮无设计级取舍、未核设计文档」）" % TBD,
        nxt, "更新 tasks/%s 的要点与锚点，并同步 STATE" % (card.name if card else "（对应卡）"))
-    _atomic_write(dest, body)
+    if not _create_new(dest, body):
+        problem("写入失败：同名记录已存在（并发建记录？）：%s" % dest.name)
+        return summary()
     ok("已生成记录骨架：reports/%s（交接 #%03d）" % (name, no))
     filled = sum(1 for x in (need, files, nxt) if x != TBD)
     note("机械字段预填 %d/3（需求 / 涉及 / 下一步）；**语义字段（验证结果 / 数据影响）留 [待填]**——"

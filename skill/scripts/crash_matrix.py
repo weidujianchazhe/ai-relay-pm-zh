@@ -205,6 +205,17 @@ def c5_repair_converges():
                r2.returncode, no_change))
 
 def main():
+    import sys as _sys
+    #  ★ 本脚本**没有参数**，直接运行即执行崩溃注入（真杀子进程）。
+    #  必须挡住 -h/--help 与任何未知参数：否则「想查用法」会变成「启动破坏性测试」，
+    #  而 AI 遇到异常输出可能反复重试，形成执行循环。
+    if "-h" in _sys.argv or "--help" in _sys.argv:
+        print("[用法] python crash_matrix.py")
+        print("  ★ 本脚本无参数：直接运行即执行崩溃注入矩阵（真杀子进程，破坏性测试）。")
+        return 0
+    if len(_sys.argv) > 1:
+        print("[问题] 不接受任何参数（收到：%s）—— 无参数直接运行才执行测试。" % " ".join(_sys.argv[1:]))
+        return 3
     rows = [c1_crash_after_tmp(), c2_crash_holding_lock(), c3_crash_after_replace(),
             c4_half_transaction(), c5_repair_converges()]
     print("== 崩溃注入矩阵（真杀进程）==")

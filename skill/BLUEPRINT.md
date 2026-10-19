@@ -39,7 +39,9 @@
 
 ```
 ① 建项目区 + 建管理区（默认同级、名 = <项目名>-管理区，位置见上一步）
-   → 展开技能包后，跑：python scripts/validate_workspace.py <管理区>
+   ★ **再按 `references/onboarding.md` §3 的清单展开骨架**（templates → tasks/ reports/ archives/ designs/ …）
+     —— **这步不做，下一步会报「tasks/ 不存在」**。
+   → 跑：python scripts/validate_workspace.py <管理区>
 ② 判形态：读 references/onboarding.md §1（命中即停，从严到宽）
 ③ 建第一张任务卡：python scripts/closeout.py <管理区> new-card --project <项目> --module <模块> --skip-design
 ④ 提交前跑门禁：python scripts/check_closeout.py <管理区>
