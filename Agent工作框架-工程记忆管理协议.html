@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 协作项目管理技能 · 使用说明</title>
+<title>Agent 工作框架 · 工程记忆管理 —— 外部记忆工程管理协议</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"PingFang SC","Microsoft YaHei","Segoe UI",Arial,sans-serif;background:#F4F3EE;color:#1A1B1C;line-height:1.75}
@@ -34,8 +34,8 @@ details{margin:8px 0}summary{cursor:pointer;font-size:13px;font-weight:600;color
 <body>
 <div class="wrap">
 <nav>
-<div class="brand">AI 协作项目管理技能</div>
-<div class="sub">使用说明 · v4.0</div>
+<div class="brand">Agent 工作框架</div>
+<div class="sub">工程记忆管理 · 外部记忆工程管理协议 · 版本以包内 MANIFEST.md 为准</div>
       <a href="#p1" data-id="p1"><span class="n">01</span>这是什么</a>
       <a href="#p2" data-id="p2"><span class="n">02</span>我能用它做什么</a>
       <a href="#p3" data-id="p3"><span class="n">03</span>它解决什么问题</a>
@@ -48,13 +48,17 @@ details{margin:8px 0}summary{cursor:pointer;font-size:13px;font-weight:600;color
 </nav>
 <main>
     <section class="page" id="p1">
-      <div class="hero"><h1>AI 协作项目管理技能</h1><p>让 AI <b>持续参与一个真实的软件工程项目</b>，而不是每次重新认识项目。</p></div>
+      <div class="hero"><h1>Agent 工作框架 · 工程记忆管理</h1><p><b>服务的是工程，不是某个 AI。</b>让 AI <b>持续参与一个真实的软件工程项目</b>，而不是每次重新认识项目；把工程的记忆（地图 / 状态 / 决策 / 交接）留在<b>外部记忆</b>里，谁来接手都能复原。</p></div>
       <div class="card"><h2>一句话</h2><p>它是一套<b>语言无关的软件工程管理协议</b> + 一组<b>确定性门禁脚本</b>：把项目的状态、设计、任务、实现、验证、交接<b>串成一条可追溯的链</b>；人手离开、AI 换人、会话中断之后，下一个接手者能<b>只读所需</b>接着干。</p>
       <p class="muted">不绑定平台，不依赖任何服务，脚本只依赖 <b>Python 3 标准库</b>。</p></div>
       <div class="card"><h2>它<b>不是</b>什么（先划边界）</h2>
       <p><span class="badge b-red">不是</span> C++ / 算法 / UI 专家　<span class="badge b-red">不是</span> 自动监督 AI 的 Agent　<span class="badge b-red">不是</span> 替管理者裁决的系统　<span class="badge b-red">不是</span> 运行时常驻守护</p>
       <p><b>它负责的是：让这些专业能力产生的工程结果，能够被持续管理。</b></p>
       <div class="note">诚实声明：<b>允许能力不足，但不允许把不足伪装成有能力</b>——所有"没做 / 没接 / 没证据"都会显式写成 <code>[待核]</code>，而不是"看起来通过"。</div></div>
+      <div class="card"><h2>一眼定位：这是给谁的</h2>
+      <p class="muted">这套东西<b>不是为普通新手做的</b>——它假设你是能扫几个关键字就判断功能、走一遍初始化流程就懂怎么玩的<b>工程同行</b>。</p>
+      <h3>上手最短路径</h3><p><b>读第 1 页（是什么 / 不是什么）→ 走一遍初始化流程</b>即可上手；其余细节全部按需拉取，<b>不必通读</b>。技能本体 <code>SKILL.md</code> 开头是路由表，不是一次读完的说明书。</p>
+      <div class="note">设计取舍（为什么没做厚新手引导）：<b>优先保证功能与包体精简、大小可控</b>——每加一层"贴心引导"，包体与复杂度都会<b>不可逆地膨胀</b>。很多能想到的功能被<b>主动砍掉</b>，正是这条取舍的结果，不是没想到。<b>需要多少，启用多少；用不上的，不背。</b></div></div>
     </section>
     <section class="page" id="p2">
       <div class="hero"><h1>我能用它做什么</h1><p>按「你遇到的问题 → 它提供的能力」看最快。</p></div>
@@ -78,7 +82,7 @@ details{margin:8px 0}summary{cursor:pointer;font-size:13px;font-weight:600;color
       </table><div class="note">每个子能力都能单独用；但<b>组合起来</b>才有"接手成本不随项目增长"的效果。<b>需要多少，启用多少。</b></div></div>
     </section>
     <section class="page" id="p3">
-      <div class="hero"><h1>它解决什么问题</h1><p>核心命题：<b>项目可以复杂沉重，AI 接手只读所需。</b></p></div>
+      <div class="hero"><h1>它解决什么问题</h1><p>核心命题：<b>服务的是工程，不是某个 AI。</b>工程可以复杂沉重，AI 接手只读所需。</p></div>
       <div class="card"><h2>四类真实问题</h2><table>
       <tr><th>问题</th><th>它的做法</th></tr>
       <tr><td>重复解释项目</td><td>把状态<b>外置</b>成文件（MAP / STATE / 记录），而不是塞在对话历史里</td></tr>
@@ -124,7 +128,7 @@ details{margin:8px 0}summary{cursor:pointer;font-size:13px;font-weight:600;color
       <div class="note">脚本清单<b>以目录为准</b>，本文不写死数量（手工清单必然漂移）。</div></div>
     </section>
     <section class="page" id="p6">
-      <div class="hero"><h1>设计 · 任务 · 状态 · 审计怎么连接</h1><p>v4.0 的工程认知模型：每个工程对象，都有它唯一的家。</p></div>
+      <div class="hero"><h1>设计 · 任务 · 状态 · 审计怎么连接</h1><p>它的工程认知模型：每个工程对象，都有它唯一的家。</p></div>
       <div class="card"><h2>七种工程对象</h2><table>
       <tr><th>对象</th><th>回答</th><th>主要承载</th></tr>
       <tr><td><b>MAP</b></td><td>环境与规则</td><td><code>MAP.md</code></td></tr>
@@ -135,7 +139,7 @@ details{margin:8px 0}summary{cursor:pointer;font-size:13px;font-weight:600;color
       <tr><td><b>AUDIT</b></td><td>对实际结果的独立验证</td><td>门禁脚本 + 独立复核</td></tr>
       <tr><td><b>ARCHIVE</b></td><td>历史事实</td><td><code>archives/</code>（任务）· <code>designs/archives/</code>（设计）<b>分开</b></td></tr>
       </table></div>
-      <div class="card"><h2>四条容易忽略、但 v4.0 明确规定的规则</h2>
+      <div class="card"><h2>四条容易忽略、但协议明确规定的规则</h2>
       <h3>① 结构 ↔ 设计，双向可追溯</h3><p>关系建在<b>结构层</b>：<code>工程板块 / 模块 / 路径 ↔ SKELETON ↔ DESIGN-ID</code>。<b>不给每个代码文件绑 DESIGN-ID</b>——那只会制造负担。</p>
       <h3>② 设计完成 ≠ 可以开工</h3><p>定稿只是"可以进入实施分析"。开工前要能回答两句：<b>这项工作在项目整体结构中的位置</b>、<b>实施依据什么结构</b>。答不出就不开工，或退回设计。</p>
       <h3>③ 任务完成 ≠ 设计失效</h3><p>任务全做完，设计可能<b>仍是当前工程基线</b>，继续作为对照依据。</p>
