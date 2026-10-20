@@ -240,3 +240,13 @@ artifact」，定版后不可原地刷新；本次是 §11 允许的另一条路
   ★ **存量工作区无需迁移**（`references/` 逐字副本随包更新即可）。
 - **是否动 Core**：**是**（核心命题 / `description` / 入口结构）。
 - **是否动阈值**：**否**（`config/defaults.yml` 未改）。
+
+**★ 同版追加（外部审查后）**：
+- **新增写端点 1 个**：`designs-check`（设计区 5 条结构检查 + 结果留痕 `REVIEWS.md`）。
+  说明：开版时确为「无新增写端点」；此端点是**后续外部审查发现「设计区 4 类资产只有设计卡有校验」后补**的，
+  仍在本版内，**故在上条记录后追加，不改动开版原文**。
+- **边界补写**：`references/design.md` 三条（资产不进管理区 / 校验也独立 / 记录仍进管理区）；
+  `templates/designs/README.template.md` 增「本区检查」一节。
+- **其它审查修复**：交接号归档后重复（改扫 `reports/`+`archives/`）· `new-record` 改 `_create_new`（去竞态）·
+  `write_cas` 空哈希进 `try` 外（不被吞）· `crash_matrix --help` 不触发测试 · `correctness_rules` 作用域判定 ·
+  `audit_all` 补「全盘」范围说明 · `providers.json` 补 `run` 字段说明。
