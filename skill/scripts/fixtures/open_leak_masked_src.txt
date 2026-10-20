@@ -1,0 +1,7 @@
+import os
+def leak(path):
+    f = open(path)
+    data = f.read()
+    with open(os.devnull) as g:
+        g.read()
+    return data

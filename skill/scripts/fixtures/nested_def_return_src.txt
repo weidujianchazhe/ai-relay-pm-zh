@@ -1,0 +1,5 @@
+def outer(xs):
+    while True:
+        def inner():
+            return 1
+        inner()

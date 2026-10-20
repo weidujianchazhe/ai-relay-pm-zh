@@ -1,0 +1,5 @@
+def spin(xs):
+    while True:
+        for x in xs:
+            if x:
+                break

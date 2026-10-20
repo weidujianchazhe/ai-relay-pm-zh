@@ -284,19 +284,11 @@ def cases():
         # 修前漏报（rc=0）：内层循环的 break、嵌套函数的 return 被误当成外层 while True 的退出。
         ("correctness_rules", "注入 嵌套 break（外层 while 仍无退出）", "correctness_rules.py", ["{r}/src"],
          lambda d: (d / "src" / "mod.py").write_text(
-             "def spin(xs):\n"
-             "    while True:\n"
-             "        for x in xs:\n"
-             "            if x:\n"
-             "                break\n",
+             (HERE / "fixtures" / "nested_break_src.txt").read_text(encoding="utf-8"),
              encoding="utf-8")),
         ("correctness_rules", "注入 嵌套函数 return 冒充退出", "correctness_rules.py", ["{r}/src"],
          lambda d: (d / "src" / "mod.py").write_text(
-             "def outer(xs):\n"
-             "    while True:\n"
-             "        def inner():\n"
-             "            return 1\n"
-             "        inner()\n",
+             (HERE / "fixtures" / "nested_def_return_src.txt").read_text(encoding="utf-8"),
              encoding="utf-8")),
         # 已知限制（不设"必须变红"用例）：句柄泄漏是【观察级】（rc=2），不是阻断。
         # 修后行为：不再被无关的 `with g` 掩盖，能定位到真正的 `f` —— 级别不变，故不进阻断用例。
@@ -462,6 +454,59 @@ def main() -> int:
         print("  [正控6失败] 过程资产被误报 exit=%d" % arc)
         for _ln in aout.splitlines()[-6:]:
             print("      " + _ln.strip())
+
+    # ★ 正控第七面：crash_matrix 的 --help 守卫（该绿必须绿）──────────────────────
+    #  为什么必须有：2026-10 实测缺陷——`--help` 曾直接启动破坏性崩溃测试，AI 遇到异常输出反复重试会形成执行循环。
+    #  守卫删掉后，`--help` 会落到「不接受任何参数」分支（返回 3）；判据即：--help 必须 0 且不进矩阵。
+    _hc = subprocess.run([sys.executable, "-B", str(HERE / "crash_matrix.py"), "--help"],
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=60, check=False)
+    _hout = _hc.stdout.decode("utf-8", "replace")
+    _uc = subprocess.run([sys.executable, "-B", str(HERE / "crash_matrix.py"), "--bogus"],
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=60, check=False)
+    _uout = _uc.stdout.decode("utf-8", "replace")
+    if _hc.returncode == 0 and "== 崩溃注入矩阵" not in _hout and "不接受任何参数" not in _hout \
+            and _uc.returncode != 0 and "== 崩溃注入矩阵" not in _uout:
+        print("  [正控通过] crash_matrix --help exit 0 且未启动破坏性测试；未知参数被拒 ✓")
+    else:
+        fails.append("正控7 / crash_matrix 守卫：--help 应 exit 0 且不进矩阵（实为 %d），未知参数应被拒且不进矩阵（实为 %d）—— 「想查用法」会启动破坏性测试"
+                     % (_hc.returncode, _uc.returncode))
+        print("  [正控7失败] crash_matrix --help exit=%d · --bogus exit=%d" % (_hc.returncode, _uc.returncode))
+
+    # ★ 正控第八面：句柄泄漏观察项不被无关 with 掩盖（该观察必须出现）──────────────
+    #  为什么必须有：2026-10 修前的漏报——只要函数里有任意 `with open()`，所有未关闭的 open() 都被豁免。
+    #  夹具：f 未关闭，同函数另有 with open(os.devnull)。判据：泄漏观察项必须报出 f。
+    pbase7 = tmp / "t00_posbase7"
+    pbase7.mkdir(parents=True)
+    build_fixture(pbase7)
+    (pbase7 / "src" / "mod.py").write_text(
+        (HERE / "fixtures" / "open_leak_masked_src.txt").read_text(encoding="utf-8"), encoding="utf-8")
+    hrc, hout7 = _run("correctness_rules.py", str(pbase7 / "src"))
+    if "「f」= open(...)" in hout7 and "句柄可能泄漏" in hout7:
+        print("  [正控通过] 未关闭的 f 即使与无关 with 同处也被报出（观察级，rc=%d）—— 豁免不再全局生效 ✓" % hrc)
+    else:
+        fails.append("正控8 / 句柄泄漏观察：未关闭的 f 应被报出，实为 rc=%d 且未命中 —— 被无关 with 掩盖（全局豁免回潮）" % hrc)
+        print("  [正控8失败] 句柄泄漏未被报出（rc=%d）" % hrc)
+        for _ln in hout7.splitlines()[-6:]:
+            print("      " + _ln.strip())
+
+    # ★ 正控第九面：new-record 并发创建同名记录，必须恰好一个成功（该绿必须绿）──────
+    #  为什么必须有：2026-10 实测竞态——修前 16 进程并发时多个进程都报「已生成」、目录里只剩 1 个文件（静默覆盖丢写）。
+    #  顺序执行的「同名被拒」证明不了并发安全；判据必须是并发：成功数 == 1 且文件数 == 1。
+    pbase8 = tmp / "t00_posbase8"
+    pbase8.mkdir(parents=True)
+    build_fixture(pbase8)
+    _procs = [subprocess.Popen([sys.executable, "-B", str(HERE / "closeout.py"), str(pbase8), "new-record",
+                                "并发同名", "--ai", "win-t", "--date", "2026-10-20", "--no-prefill"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              for _ in range(16)]
+    _rcs = [_p.wait(timeout=180) for _p in _procs]
+    _ok = sum(1 for _r in _rcs if _r == 0)
+    _files = sorted((pbase8 / "reports").glob("2026-10-20_并发同名_win-t.md"))
+    if _ok == 1 and len(_files) == 1:
+        print("  [正控通过] 16 进程并发建同名记录：恰好 1 个成功、1 个文件 —— 并发创建不丢写 ✓")
+    else:
+        fails.append("正控9 / new-record 并发：应恰好 1 个成功且 1 个文件，实为成功 %d、文件 %d —— 并发覆盖（静默丢写）" % (_ok, len(_files)))
+        print("  [正控9失败] 并发成功 %d · 文件 %d（应为 1 与 1）" % (_ok, len(_files)))
 
     for gate, desc, script, extra, mutate in todo:
         ran += 1
