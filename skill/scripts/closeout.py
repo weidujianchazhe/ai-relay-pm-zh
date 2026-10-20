@@ -47,6 +47,7 @@ from _common import (  # noqa: E402
     note, ok, problem, read, run, summary, tbd, usage_exit,  # noqa: E402
 )
 import lease  # noqa: E402  —— 任务租约与 CAS 原语（并发强制层，见 references/concurrency.md）
+import time
 
 TYPES = ("[接力]", "[完成]", "[废弃]", "[里程碑]")
 # 短号正则**不再硬编码**：唯一真值 = config/defaults.yml 的 naming.branch_code_pattern
@@ -1007,8 +1008,86 @@ ENDPOINTS = {
     "release":        ("释放租约（保留「承接」）", "是", "租约归属校验 + CAS", "非持有者即拒（--force 留痕）；**卡漂移即拒，需 --accept-drift 留痕认领**", "atomic"),
     "card-update":    ("锁内改卡业务字段 + 同步刷新哈希/revision", "**是**（改成同值报「未变化，未写盘」）", "**锁内**漂移检测 + 租约守卫（--ai）＋ fencing（--token）", "字段不存在即拒（不静默新增）；他人持有效租约即拒；卡漂移即拒", "atomic"),
     "repair":         ("半事务补偿：索引冷热 / 指向 / 崩溃残留", "**是**（跑第二遍报无需修复）", "CAS（每处写入前比对）", "CAS 冲突即停并留痕", "best-effort"),
+    "designs-check": ("设计区检查：卡成对 / _research README / _assets 来源 / 残留 / 归档成对", "是（重复跑同结果）", "—（只读设计区资产；REVIEWS 只追加一行）", "只报[问题]；REVIEWS 写失败降级为[待核]", "best-effort"),
     "api":            ("打印本表（只读，视图）", "是", "—", "恒退出 0", "read-only"),
 }
+
+
+def _dx_stamp() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%S+08:00", time.localtime())
+
+
+def _dx_card_pairs(d: Path):
+    """设计卡成对：<卡>.md 与 <卡>.blueprint.html。"""
+    return [p.stem for p in sorted(d.glob("*.md")) if not (d / (p.stem + ".blueprint.html")).exists()]
+
+
+def _dx_topic_readme(d: Path):
+    """_research/<主题>/ 每个主题目录必须有 README。"""
+    r = d / "_research"
+    if not r.is_dir():
+        return []
+    return [s.name for s in sorted(x for x in r.iterdir() if x.is_dir()) if not any(s.glob("README*"))]
+
+
+def _dx_asset_source(d: Path):
+    """_assets/ 每个文件首 3 行内必须有「来源」。"""
+    a = d / "_assets"
+    if not a.is_dir():
+        return []
+    bad = []
+    for p in sorted(x for x in a.rglob("*") if x.is_file()):
+        head = chr(10).join((read(p) or "").splitlines()[:3])
+        if "来源" not in head:
+            bad.append(str(p.relative_to(d)))
+    return bad
+
+
+def _dx_debris(d: Path):
+    """残留：.tmp 文件 / 非协议空目录（协议目录可空：archives / _research / _assets）。"""
+    ALLOWED = {"archives", "archives/done", "_research", "_assets"}
+    res = [str(p.relative_to(d)).replace(chr(92), "/") for p in d.rglob("*.tmp")]
+    for p in d.rglob("*"):
+        if p.is_dir() and not any(p.iterdir()):
+            rel = str(p.relative_to(d)).replace(chr(92), "/")
+            if rel not in ALLOWED:
+                res.append(rel)
+    return res
+def _dx_archive_pairs(d: Path):
+    """designs/archives/ 详述与蓝图成对（README 除外）。"""
+    ar = d / "archives"
+    if not ar.is_dir():
+        return []
+    return [p.stem for p in sorted(ar.glob("*.md"))
+            if p.stem.upper() != "README" and not (ar / (p.stem + ".blueprint.html")).exists()]
+
+
+def cmd_designs_check(root: Path, a) -> int:
+    """设计区检查（资产不进管理区；结果写 REVIEWS.md）。"""
+    d = root / "designs"
+    if not d.is_dir():
+        tbd("designs/ 不存在 —— 本项目未启用设计区")
+        return summary()
+    cards = _dx_card_pairs(d)
+    topics = _dx_topic_readme(d)
+    assets = _dx_asset_source(d)
+    debris = _dx_debris(d)
+    arch = _dx_archive_pairs(d)
+    (problem if cards else ok)("设计卡缺蓝图：%s" % "、".join(cards[:6]) if cards else "设计卡均成对（详述 + 蓝图）")
+    (problem if topics else ok)("_research/ 子主题缺 README：%s" % "、".join(topics[:6]) if topics else "_research/ 子主题均有 README")
+    (problem if assets else ok)("_assets/ 文件缺「来源」：%s" % "、".join(assets[:6]) if assets else "_assets/ 文件均有来源说明")
+    (problem if debris else ok)("残留（.tmp / 空目录）：%s" % "、".join(debris[:6]) if debris else "无 .tmp 残留、无空目录")
+    (problem if arch else ok)("archives/ 缺配套蓝图：%s" % "、".join(arch[:6]) if arch else "archives/ 详述与蓝图成对")
+    if not a.no_record:
+        line = "- %s · 设计区检查：卡%d 主题%d 资产%d 残留%d 归档%d" % (
+            _dx_stamp(), len(cards), len(topics), len(assets), len(debris), len(arch))
+        try:
+            with (root / "REVIEWS.md").open("a", encoding="utf-8") as f:
+                f.write(line + chr(10))
+            ok("检查结果已留痕（REVIEWS.md 一行，带机器戳）")
+        except OSError as e:
+            tbd("留痕写入失败：%s" % e)
+    return summary()
 
 
 def cmd_api(a) -> int:
@@ -1213,6 +1292,8 @@ def build_parser():
     p10.add_argument("--handover", default="", help="快捷：改「上次交接」裸路径（等价 --field 上次交接 --value …）")
     p10.add_argument("--token", default=None, help="fencing 令牌（认领时回显）；给了则严格校验，防过期写者")
 
+    p11 = sub.add_parser("designs-check", help="设计区检查（资产不进管理区；结果写 REVIEWS.md）")
+    p11.add_argument("--no-record", action="store_true", help="只检查不留痕")
     p7 = sub.add_parser("design-archive", help="走完流程的设计卡移入 designs/archives/（详述+蓝图一起移）")
     p7.add_argument("name")
     p7.add_argument("--dry-run", action="store_true", help="只预览，不写盘")
@@ -1235,6 +1316,7 @@ def main() -> int:
             "new-card": cmd_new_card, "reviews-archive": cmd_reviews_archive,
             "design-archive": cmd_design_archive,
             "claim": cmd_claim, "release": cmd_release, "card-update": cmd_card_update,
+            "designs-check": cmd_designs_check,
             "repair": cmd_repair}[a.cmd](root, a)
 
 
