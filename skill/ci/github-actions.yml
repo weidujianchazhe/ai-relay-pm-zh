@@ -92,6 +92,10 @@ jobs:
       #   - **依赖例外**：ui.main_window->ui.mw_parts
       - name: 代码度量与依赖方向
         if: ${{ vars.SOURCE_ROOT != '' }}
+        #  ★ 2026-10-16 外部审查 #5 复核：`--ws=.`(仓库根) 是【有意】的正确用法，不要改成最小工作区 ——
+        #    code_metrics 用 `--ws` 当 root 算 `p.relative_to(root)`（见该脚本 L596 实测注释），
+        #    若指向不含源码的最小工作区会直接 rc=3（已实测）。仓库根同时含 scripts/ 与 config/defaults.yml，
+        #    阈值回落到 defaults 也是【有意】的：CI 度量的是【包自己】，不是某个项目。
         run: python -B scripts/code_metrics.py "${{ vars.SOURCE_ROOT }}" --ws=.
 
       # ── 退出码：0 全通过 · 1 有[问题]＝阻断 · 3 脚本错误＝阻断 · **2 仅[待核]：本样板未实现其不阻断语义，接入方请自行处理** ──
