@@ -30,7 +30,6 @@ import json
 import os
 import platform
 import re
-import socket
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -206,7 +205,7 @@ def machine_code(length: int = 8) -> str:
 
     刻意**不**取人名、不取用户名——本脚本要回答的是"哪台机器"，不是"谁"。
     """
-    parts = [socket.gethostname(), platform.machine(), platform.system()]
+    parts = [platform.node(), platform.machine(), platform.system()]
     guid = _windows_machine_guid()
     if guid:
         parts.append(guid)

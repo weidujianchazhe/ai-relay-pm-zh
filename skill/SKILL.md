@@ -1,5 +1,17 @@
 ---
 name: ai-relay-pm-zh
+version: 4.2.1
+display_name: Agent 工作框架 · 工程记忆管理
+display_name_en: Agent Work Framework · Engineering Memory
+description_zh: |
+  **服务的是工程，不是某个 AI。** 换 AI / 换对话 / 换工作台，工程记忆仍完整（状态可复原 / 决策可追溯 / 交付可验证）。
+  语言和 AI 无关的软件工程管理协议：新建或接管项目按指针走；任务卡驱动 · 快照式状态 · 分层索引 · 并发控制 · 审计与恢复。
+  多 AI 边界：只做并发控制，不做通信协作；设计定稿与分工冲突需上层裁决。代码质量规范语言无关（Python 已接线，其余已登记未接通）。
+description_en: |
+  **It serves the engineering, not a particular AI.** Switch AI, switch conversation, switch workplace - the engineering memory stays intact: state restorable, decisions traceable, delivery verifiable.
+  A language- and AI-agnostic software engineering management protocol: initialize or take over a project by following pointers; task-card driven, snapshot state, layered index, concurrency control, audit and recovery.
+  Multi-AI boundary: concurrency control only, no inter-AI communication; design sign-off and work-division conflicts are escalated to humans. Code quality rules are language-agnostic (Python wired; others registered but not connected).
+
 description: |
   **核心命题：Agent 工作框架 · 工程记忆管理 —— 服务的是工程，不是某个 AI。**
   换 AI / 换对话 / 换工作台，**工程记忆仍完整**（状态可复原 / 决策可追溯 / 交付可验证）。
