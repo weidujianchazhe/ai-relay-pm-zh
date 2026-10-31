@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+title: Agent 工作框架 · 工程记忆管理（ai-relay-pm-zh）
+message: 引用本作品时请使用下列信息；作者明确放弃就本作品申请专利。
+type: software
+authors:
+  - family-names: 如天之星
+    given-names: ""
+version: 4.2.1
+date-released: 2026-10-21
+license: MIT
+repository-code: https://github.com/weidujianchazhe/ai-relay-pm-zh
+url: https://github.com/weidujianchazhe/ai-relay-pm-zh
+abstract: >-
+  服务的是工程，不是某个 AI。语言和 AI 无关的软件工程管理协议：
+  任务卡驱动、快照式状态、分层索引、多 AI 并发控制、审计与恢复、
+  设计区（研究/资产/产物/归档）、语言无关的代码质量规范。
+  换 AI / 换对话 / 换工作台，工程记忆仍完整：状态可复原、决策可追溯、交付可验证。
+keywords:
+  - Agent 工作框架
+  - 工程记忆管理
+  - 多 AI 并发控制
+  - 项目管理协议
+  - engineering memory
+  - concurrency control

@@ -1,0 +1,37 @@
+{
+  "title": "Agent 工作框架 · 工程记忆管理（ai-relay-pm-zh）",
+  "description": "<p><b>服务的是工程，不是某个 AI。</b>换 AI / 换对话 / 换工作台，工程记忆仍完整：状态可复原、决策可追溯、交付可验证。</p><p>语言和 AI 无关的软件工程管理协议：新建或接管项目按指针走；任务卡驱动 · 快照式状态 · 分层索引 · 并发控制（互斥 / 租约 / fencing token / 索引镜像 / 归档规则）· 审计与恢复 · 设计区（研究 / 资产 / 产物 / 归档）· 语言无关的代码质量规范。</p><p><b>多 AI 边界</b>：只做并发控制，不做通信协作；设计定稿与工作分工的并发冲突需上层裁决。</p><p><b>防御性公开</b>：作者明确放弃就本作品及其后续版本申请专利，任何人可将其作为现有技术引用。详见仓库根 DEFENSIVE-PUBLICATION.md。</p>",
+  "upload_type": "software",
+  "license": "MIT",
+  "access_right": "open",
+  "creators": [
+    {
+      "name": "如天之星",
+      "affiliation": ""
+    }
+  ],
+  "keywords": [
+    "Agent 工作框架",
+    "工程记忆管理",
+    "工程记忆",
+    "外部记忆",
+    "AI 协作",
+    "多 AI 并发控制",
+    "任务卡驱动",
+    "项目管理协议",
+    "agent framework",
+    "engineering memory",
+    "context management",
+    "multi-agent",
+    "concurrency control",
+    "defensive publication"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/weidujianchazhe/ai-relay-pm-zh",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ],
+  "notes": "防御性公开（Defensive Publication）。作者放弃专利，任何人可作为现有技术引用。"
+}
