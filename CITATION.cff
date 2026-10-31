@@ -6,6 +6,12 @@ authors:
   - family-names: 如天之星
     given-names: ""
 version: 4.2.1
+doi: 10.5281/zenodo.23840158
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23840158
+  - type: doi
+    value: 10.5281/zenodo.23840157
 date-released: 2026-10-21
 license: MIT
 repository-code: https://github.com/weidujianchazhe/ai-relay-pm-zh
